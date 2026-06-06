@@ -1,169 +1,376 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Miss Vicky's Comment Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
+    :root {
+      --green:       #2e7d52;
+      --green-dark:  #1f5c3a;
+      --green-light: #e6f4ec;
+      --amber:       #e8963a;
+      --amber-light: #fef6e8;
+      --cream:       #f7f3ec;
+      --white:       #ffffff;
+      --text:        #222222;
+      --muted:       #666666;
+      --border:      #ddd8ce;
+      --red:         #c0392b;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Georgia', serif;
-      background: #fdf6ee;
-      color: #333;
-      padding: 30px 20px 60px;
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 17px;
     }
 
-    h1 {
+    /* ── Header ───────────────────────────────────────────────── */
+    .site-header {
+      background: var(--green-dark);
+      color: white;
+      padding: 24px 20px 20px;
       text-align: center;
-      font-size: 1.6rem;
-      color: #5a3e28;
+    }
+
+    .site-header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .site-header p {
+      margin-top: 6px;
+      font-size: 0.95rem;
+      opacity: 0.85;
+    }
+
+    /* ── Main layout ──────────────────────────────────────────── */
+    .main {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 24px 16px 140px; /* bottom padding for sticky nav */
+    }
+
+    /* ── Progress stepper ─────────────────────────────────────── */
+    .stepper {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 28px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 44px;
+      position: relative;
+    }
+
+    .step-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      right: -50%;
+      height: 2px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .step-item.done:not(:last-child)::after,
+    .step-item.active:not(:last-child)::after {
+      background: var(--green);
+    }
+
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      position: relative;
+      z-index: 1;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .step-item.done .step-circle {
+      background: var(--green);
+      color: white;
+    }
+
+    .step-item.active .step-circle {
+      background: var(--amber);
+      color: white;
+      box-shadow: 0 0 0 4px var(--amber-light);
+    }
+
+    .step-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-top: 5px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      line-height: 1.2;
+      max-width: 56px;
+    }
+
+    .step-item.active .step-label { color: var(--amber); }
+    .step-item.done .step-label   { color: var(--green); }
+
+    /* ── Step counter text ────────────────────────────────────── */
+    .step-counter {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--green-dark);
       margin-bottom: 6px;
     }
 
-    .subtitle {
-      text-align: center;
-      color: #888;
+    .card-subtitle {
       font-size: 0.9rem;
-      margin-bottom: 30px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 28px 32px;
+      color: var(--muted);
       margin-bottom: 22px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-      max-width: 820px;
-      margin-left: auto;
-      margin-right: auto;
+      line-height: 1.5;
     }
 
-    .card h2 {
-      font-size: 1rem;
-      font-weight: bold;
-      color: #5a3e28;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border-bottom: 2px solid #f0e0cc;
-      padding-bottom: 8px;
-      margin-bottom: 18px;
-    }
-
-    .row {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
+    /* ── Field ────────────────────────────────────────────────── */
     .field {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-width: 180px;
+      margin-bottom: 20px;
     }
 
     .field label {
-      font-size: 0.8rem;
-      font-weight: bold;
-      color: #666;
-      margin-bottom: 5px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
     }
 
-    .field input,
+    .field .hint {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 5px;
+      font-style: italic;
+    }
+
+    .field input[type=text],
+    .field input[type=number],
     .field select,
     .field textarea {
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 8px 10px;
-      font-size: 0.95rem;
+      width: 100%;
+      padding: 13px 14px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
       font-family: inherit;
-      color: #333;
-      background: #fafafa;
-      transition: border-color 0.2s;
+      color: var(--text);
+      background: #fafaf8;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 38px;
     }
 
     .field input:focus,
     .field select:focus,
     .field textarea:focus {
       outline: none;
-      border-color: #c8956c;
+      border-color: var(--green);
       background: white;
     }
 
     .field textarea {
       resize: vertical;
-      min-height: 70px;
+      min-height: 90px;
+      line-height: 1.5;
     }
 
-    .field .hint {
-      font-size: 0.75rem;
-      color: #aaa;
-      margin-top: 4px;
-      font-style: italic;
+    /* Two-column row on wider screens */
+    .field-row {
+      display: flex;
+      gap: 14px;
     }
 
-    .checkbox-group {
+    .field-row .field { flex: 1; }
+
+    /* ── Pill checkboxes ──────────────────────────────────────── */
+    .pill-group {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 4px;
+      gap: 10px;
     }
 
-    .checkbox-group label {
-      display: flex;
+    .pill-group input[type=checkbox] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .pill-group label {
+      display: inline-flex;
       align-items: center;
-      gap: 5px;
-      font-size: 0.85rem;
-      font-weight: normal;
-      text-transform: none;
-      letter-spacing: 0;
-      color: #444;
-      background: #f5f0ea;
-      border-radius: 20px;
-      padding: 4px 12px;
+      padding: 10px 18px;
+      background: var(--cream);
+      border: 2px solid var(--border);
+      border-radius: 50px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
       cursor: pointer;
-      border: 1px solid #e0d5c8;
-      transition: background 0.15s;
+      transition: all 0.15s;
+      user-select: none;
+      margin: 0;
     }
 
-    .checkbox-group label:hover { background: #ede3d6; }
-    .checkbox-group input[type="checkbox"] { accent-color: #c8956c; }
+    .pill-group label:hover {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-light);
+    }
 
-    .btn-row {
+    .pill-group input[type=checkbox]:checked + label {
+      background: var(--green-light);
+      border-color: var(--green);
+      color: var(--green-dark);
+    }
+
+    /* ── Sticky nav bar ───────────────────────────────────────── */
+    .sticky-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 2px solid var(--border);
+      padding: 14px 20px;
       display: flex;
       gap: 12px;
-      max-width: 820px;
-      margin: 0 auto 22px;
-      flex-wrap: wrap;
+      max-width: 620px;
+      margin: 0 auto;
+      z-index: 100;
     }
 
-    .btn {
+    /* The sticky nav needs to be centered on desktop */
+    @media (min-width: 620px) {
+      .sticky-nav {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 620px;
+        border-left: 2px solid var(--border);
+        border-right: 2px solid var(--border);
+      }
+    }
+
+    .nav-btn {
       flex: 1;
-      padding: 13px;
-      font-size: 1rem;
-      font-family: inherit;
-      font-weight: bold;
+      padding: 16px 10px;
+      border-radius: 12px;
       border: none;
-      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 800;
       cursor: pointer;
-      transition: background 0.2s;
-      min-width: 200px;
+      transition: background 0.2s, opacity 0.2s;
     }
 
-    .btn-add    { background: #c8956c; color: white; }
-    .btn-add:hover { background: #b07a55; }
+    .nav-btn-back {
+      background: var(--cream);
+      color: var(--muted);
+      border: 2px solid var(--border);
+      flex: 0 0 auto;
+      width: 80px;
+    }
 
-    .btn-dl     { background: #5a3e28; color: white; }
-    .btn-dl:hover { background: #3e2a18; }
-    .btn-dl:disabled { background: #ccc; cursor: not-allowed; }
+    .nav-btn-back:disabled { opacity: 0.35; cursor: default; }
 
-    /* Queue */
-    #queue-card { display: none; max-width: 820px; margin: 0 auto 22px; }
+    .nav-btn-next {
+      background: var(--green);
+      color: white;
+    }
+
+    .nav-btn-next:hover { background: var(--green-dark); }
+
+    .nav-btn-add {
+      background: var(--amber);
+      color: white;
+    }
+
+    .nav-btn-add:hover { background: #d4832e; }
+
+    /* ── Queue section ────────────────────────────────────────── */
+    .queue-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .queue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .queue-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--green-dark);
+    }
+
+    .queue-badge {
+      background: var(--green);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 800;
+      border-radius: 50px;
+      padding: 3px 12px;
+    }
 
     .queue-list { list-style: none; }
 
@@ -171,354 +378,503 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: #fdf6ee;
-      border: 1px solid #e0d5c8;
-      margin-bottom: 8px;
+      padding: 14px 16px;
+      background: var(--green-light);
+      border: 1.5px solid #b8dfc8;
+      border-radius: 12px;
+      margin-bottom: 10px;
     }
 
     .queue-item-name {
-      font-weight: bold;
-      color: #5a3e28;
+      font-weight: 800;
+      color: var(--green-dark);
+      font-size: 1rem;
     }
 
     .queue-item-sub {
-      font-size: 0.8rem;
-      color: #999;
+      font-size: 0.82rem;
+      color: var(--muted);
       margin-top: 2px;
     }
 
     .remove-btn {
-      background: none;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      color: #999;
-      font-size: 0.8rem;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 700;
       cursor: pointer;
-      padding: 4px 10px;
+      padding: 7px 14px;
       font-family: inherit;
       transition: all 0.15s;
+      white-space: nowrap;
     }
 
-    .remove-btn:hover { border-color: #c0392b; color: #c0392b; }
+    .remove-btn:hover { border-color: var(--red); color: var(--red); }
 
-    /* Preview */
-    #preview-card { display: none; max-width: 820px; margin: 0 auto 22px; }
-
-    #comment-output {
-      background: #fdf6ee;
-      border: 1px solid #e0d5c8;
-      border-radius: 8px;
-      padding: 20px 24px;
-      font-size: 0.9rem;
-      line-height: 1.7;
-      white-space: pre-wrap;
-      color: #333;
+    .download-btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 18px;
+      background: var(--green-dark);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.01em;
     }
 
-    .success-banner {
-      background: #eaf7ee;
-      border: 1px solid #a8d8b4;
-      border-radius: 8px;
-      padding: 12px 16px;
-      color: #2d6a4f;
+    .download-btn:hover { background: #163f28; }
+    .download-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    /* ── Banner ───────────────────────────────────────────────── */
+    .banner {
+      border-radius: 12px;
+      padding: 14px 18px;
       font-size: 0.95rem;
-      margin-bottom: 12px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      line-height: 1.5;
       display: none;
+    }
+
+    .banner-success {
+      background: var(--green-light);
+      border: 1.5px solid #a0cfb5;
+      color: var(--green-dark);
+    }
+
+    /* ── Preview ──────────────────────────────────────────────── */
+    .preview-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .preview-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--green-dark);
+      margin-bottom: 14px;
+    }
+
+    .preview-body {
+      background: var(--cream);
+      border-radius: 10px;
+      padding: 18px;
+      font-size: 0.9rem;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+
+    /* ── Responsive tweaks ────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .field-row { flex-direction: column; gap: 0; }
+      .card { padding: 22px 18px; }
+      .site-header h1 { font-size: 1.3rem; }
+      .step-label { font-size: 0.6rem; }
     }
   </style>
 </head>
 <body>
 
-<h1>Miss Vicky's Comment Generator</h1>
-<p class="subtitle">Fill in the form for each student, add them to the list, then download one Word document with all comments.</p>
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<div class="site-header">
+  <h1>Miss Vicky's Comment Generator</h1>
+  <p>Fill in the steps for each student, then download one Word document for the whole class.</p>
+</div>
 
-<!-- ── BASIC INFO ─────────────────────────────────────────────────────────── -->
-<div class="card">
-  <h2>Basic Information</h2>
-  <div class="row">
-    <div class="field">
-      <label>First Name *</label>
-      <input type="text" id="firstName" placeholder="e.g. Maeve" />
+<div class="main">
+
+  <!-- ── Success banner ─────────────────────────────────────────────────── -->
+  <div class="banner banner-success" id="successBanner"></div>
+
+  <!-- ── Stepper ────────────────────────────────────────────────────────── -->
+  <div class="stepper" id="stepper">
+    <div class="step-item active" data-step="1">
+      <div class="step-circle">1</div>
+      <div class="step-label">Student Info</div>
     </div>
-    <div class="field">
-      <label>Last Name *</label>
-      <input type="text" id="lastName" placeholder="e.g. Budd" />
+    <div class="step-item" data-step="2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Opening</div>
     </div>
+    <div class="step-item" data-step="3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Social</div>
+    </div>
+    <div class="step-item" data-step="4">
+      <div class="step-circle">4</div>
+      <div class="step-label">Motor</div>
+    </div>
+    <div class="step-item" data-step="5">
+      <div class="step-circle">5</div>
+      <div class="step-label">Language</div>
+    </div>
+    <div class="step-item" data-step="6">
+      <div class="step-circle">6</div>
+      <div class="step-label">Goals</div>
+    </div>
+  </div>
+
+  <div class="step-counter" id="stepCounter">Step 1 of 6</div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 1 — Student Info
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step1">
+    <div class="card-title">Student Information</div>
+    <div class="card-subtitle">Start by entering the student's basic details.</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="firstName">First Name</label>
+        <input type="text" id="firstName" placeholder="e.g. Maeve" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label for="lastName">Last Name</label>
+        <input type="text" id="lastName" placeholder="e.g. Budd" autocomplete="off"/>
+      </div>
+    </div>
+
     <div class="field">
-      <label>Pronoun *</label>
+      <label for="pronoun">Pronouns</label>
       <select id="pronoun">
         <option value="she">She / Her</option>
         <option value="he">He / Him</option>
         <option value="they">They / Them</option>
       </select>
     </div>
-  </div>
-  <div class="row">
-    <div class="field">
-      <label>Season *</label>
-      <select id="season">
-        <option value="Fall">Fall</option>
-        <option value="Spring">Spring</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Year *</label>
-      <input type="number" id="year" value="2025" min="2020" max="2040" />
-    </div>
-  </div>
-</div>
 
-<!-- ── OPENING ────────────────────────────────────────────────────────────── -->
-<div class="card">
-  <h2>Opening — Overall Impression</h2>
-  <div class="row">
-    <div class="field">
-      <label>Personality descriptors</label>
-      <div class="checkbox-group" id="personality-checks">
-        <label><input type="checkbox" value="happy"> happy</label>
-        <label><input type="checkbox" value="sweet"> sweet</label>
-        <label><input type="checkbox" value="kind"> kind</label>
-        <label><input type="checkbox" value="bright"> bright</label>
-        <label><input type="checkbox" value="energetic"> energetic</label>
-        <label><input type="checkbox" value="curious"> curious</label>
-        <label><input type="checkbox" value="nurturing"> nurturing</label>
-        <label><input type="checkbox" value="shy at first"> shy at first</label>
-        <label><input type="checkbox" value="outgoing"> outgoing</label>
-        <label><input type="checkbox" value="creative"> creative</label>
+    <div class="field-row">
+      <div class="field">
+        <label for="season">Season</label>
+        <select id="season">
+          <option value="Fall">Fall</option>
+          <option value="Spring">Spring</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="year">Year</label>
+        <input type="number" id="year" value="2025" min="2020" max="2040"/>
       </div>
     </div>
   </div>
-  <div class="row">
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 2 — Opening / Overall Impression
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step2" style="display:none">
+    <div class="card-title">Overall Impression</div>
+    <div class="card-subtitle">How would you describe this student in a few words? This shapes the opening paragraph.</div>
+
     <div class="field">
-      <label>Classroom adjustment</label>
+      <label>Personality (pick up to 2)</label>
+      <div class="pill-group" id="personality-checks">
+        <input type="checkbox" id="p1" value="happy"><label for="p1">Happy</label>
+        <input type="checkbox" id="p2" value="sweet"><label for="p2">Sweet</label>
+        <input type="checkbox" id="p3" value="kind"><label for="p3">Kind</label>
+        <input type="checkbox" id="p4" value="bright"><label for="p4">Bright</label>
+        <input type="checkbox" id="p5" value="energetic"><label for="p5">Energetic</label>
+        <input type="checkbox" id="p6" value="curious"><label for="p6">Curious</label>
+        <input type="checkbox" id="p7" value="nurturing"><label for="p7">Nurturing</label>
+        <input type="checkbox" id="p8" value="shy at first"><label for="p8">Shy at first</label>
+        <input type="checkbox" id="p9" value="outgoing"><label for="p9">Outgoing</label>
+        <input type="checkbox" id="p10" value="creative"><label for="p10">Creative</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="adjustment">How has this student adjusted to the classroom?</label>
       <select id="adjustment">
-        <option value="adapted well to our classroom routines">Adapted well (new student)</option>
+        <option value="adapted well to our classroom routines">Adapted well — new to the class</option>
         <option value="grown so much since the beginning of the year">Grown a lot since September</option>
-        <option value="been an absolute joy to have in class all year">Had a great year overall</option>
+        <option value="been an absolute joy to have in class all year">Had a wonderful year overall</option>
         <option value="made great strides throughout the year">Made great strides this year</option>
       </select>
     </div>
+
     <div class="field">
-      <label>Friendship / social note</label>
+      <label for="socialOpener">How does this student do with friends?</label>
       <select id="socialOpener">
         <option value="has made many friends and plays well with them">Made many friends, plays well</option>
-        <option value="has bonded with her classmates and enjoys playing with them">Bonded with classmates</option>
-        <option value="is beginning to warm up to her friends">Beginning to warm up to friends</option>
-        <option value="is great about sharing and plays well with her friends">Great sharer, plays well</option>
-        <option value="has made great strides in how she communicates with friends during free play">Improved communication in free play</option>
+        <option value="has bonded with her classmates and enjoys playing with them">Bonded well with classmates</option>
+        <option value="is beginning to warm up to her friends">Still warming up to friends</option>
+        <option value="is great about sharing and plays well with her friends">Great at sharing, plays well</option>
+        <option value="has made great strides in how she communicates with friends during free play">Improved communication during free play</option>
       </select>
     </div>
-  </div>
-  <div class="row">
-    <div class="field">
-      <label>Favorite activity / interest</label>
-      <input type="text" id="favActivity" placeholder="e.g. playing with the babies and cooking in the kitchen" />
-      <span class="hint">Used in the opening paragraph.</span>
-    </div>
-  </div>
-  <div class="row">
-    <div class="field">
-      <label>Additional opening notes (optional)</label>
-      <textarea id="openingExtra" placeholder="Any other details for the opening paragraph..."></textarea>
-    </div>
-  </div>
-</div>
 
-<!-- ── SOCIAL & EMOTIONAL ─────────────────────────────────────────────────── -->
-<div class="card">
-  <h2>Social &amp; Emotional Skills</h2>
-  <div class="row">
     <div class="field">
-      <label>Play preferences</label>
-      <div class="checkbox-group" id="play-checks">
-        <label><input type="checkbox" value="art projects"> art projects</label>
-        <label><input type="checkbox" value="sensory bins"> sensory bins</label>
-        <label><input type="checkbox" value="playing with babies/dolls"> babies/dolls</label>
-        <label><input type="checkbox" value="the kitchen/dramatic play"> kitchen/dramatic play</label>
-        <label><input type="checkbox" value="books"> books</label>
-        <label><input type="checkbox" value="cars and trucks"> cars &amp; trucks</label>
-        <label><input type="checkbox" value="Legos/blocks"> Legos/blocks</label>
-        <label><input type="checkbox" value="puzzles"> puzzles</label>
-        <label><input type="checkbox" value="imaginative play with friends"> imaginative play</label>
+      <label for="favActivity">What does this student love most? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <input type="text" id="favActivity" placeholder="e.g. playing with the babies and cooking in the kitchen"/>
+      <span class="hint">Used in the opening sentence of the comment.</span>
+    </div>
+
+    <div class="field">
+      <label for="openingExtra">Anything else to add to the opening? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="openingExtra" placeholder="Any extra details you'd like in the first paragraph..."></textarea>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 3 — Social & Emotional
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step3" style="display:none">
+    <div class="card-title">Social &amp; Emotional Skills</div>
+    <div class="card-subtitle">What does this student enjoy playing, and how do they interact with others?</div>
+
+    <div class="field">
+      <label>What does this student love to play? (check all that apply)</label>
+      <div class="pill-group" id="play-checks">
+        <input type="checkbox" id="pl1" value="art projects"><label for="pl1">Art projects</label>
+        <input type="checkbox" id="pl2" value="sensory bins"><label for="pl2">Sensory bins</label>
+        <input type="checkbox" id="pl3" value="playing with babies/dolls"><label for="pl3">Babies / dolls</label>
+        <input type="checkbox" id="pl4" value="the kitchen/dramatic play"><label for="pl4">Kitchen / dramatic play</label>
+        <input type="checkbox" id="pl5" value="books"><label for="pl5">Books</label>
+        <input type="checkbox" id="pl6" value="cars and trucks"><label for="pl6">Cars &amp; trucks</label>
+        <input type="checkbox" id="pl7" value="Legos/blocks"><label for="pl7">Legos / blocks</label>
+        <input type="checkbox" id="pl8" value="puzzles"><label for="pl8">Puzzles</label>
+        <input type="checkbox" id="pl9" value="imaginative play with friends"><label for="pl9">Imaginative play</label>
       </div>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Social/emotional challenge (optional)</label>
+      <label for="socialChallenge">Is there a social challenge to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
       <select id="socialChallenge">
-        <option value="">None / not notable</option>
-        <option value="sometimes gets frustrated when taking turns with friends">Struggles with turn-taking</option>
+        <option value="">No — nothing to flag</option>
+        <option value="sometimes gets frustrated when taking turns with friends">Gets frustrated with turn-taking</option>
         <option value="is still warming up and can be quiet around new friends">Quiet / still warming up</option>
         <option value="sometimes struggles to express herself when upset">Struggles to express emotions</option>
-        <option value="is working on sharing with her friends">Working on sharing</option>
+        <option value="is working on sharing with her friends">Still working on sharing</option>
       </select>
     </div>
-  </div>
-  <div class="row">
-    <div class="field">
-      <label>Additional social &amp; emotional notes (optional)</label>
-      <textarea id="socialExtra" placeholder="Anything else worth noting..."></textarea>
-    </div>
-  </div>
-</div>
 
-<!-- ── FINE & GROSS MOTOR ─────────────────────────────────────────────────── -->
-<div class="card">
-  <h2>Fine &amp; Gross Motor Skills</h2>
-  <div class="row">
     <div class="field">
-      <label>Outdoor / gross motor activities</label>
-      <div class="checkbox-group" id="outdoor-checks">
-        <label><input type="checkbox" value="running and climbing"> running &amp; climbing</label>
-        <label><input type="checkbox" value="digging in the dirt"> digging in dirt</label>
-        <label><input type="checkbox" value="playing soccer"> soccer</label>
-        <label><input type="checkbox" value="playing tag"> tag</label>
-        <label><input type="checkbox" value="riding bikes"> bikes</label>
-        <label><input type="checkbox" value="playing on the playground"> playground</label>
-      </div>
+      <label for="socialExtra">Anything else to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="socialExtra" placeholder="Any extra details for this section..."></textarea>
     </div>
   </div>
-  <div class="row">
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 4 — Fine & Gross Motor
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step4" style="display:none">
+    <div class="card-title">Fine &amp; Gross Motor Skills</div>
+    <div class="card-subtitle">How does this student do with art, outdoor activities, and taking care of themselves?</div>
+
     <div class="field">
-      <label>Art participation</label>
+      <label for="artLevel">How is this student with art?</label>
       <select id="artLevel">
-        <option value="loves working on art projects and takes great care with her work">Loves art, careful/detail-oriented</option>
-        <option value="enjoys working on her art projects using all different mediums">Enjoys art, uses different mediums</option>
-        <option value="has really blossomed as an artist and takes her time with projects">Has blossomed as an artist</option>
-        <option value="enjoys art but is still building her confidence with projects">Enjoys art, building confidence</option>
-        <option value="">Not notable / skip</option>
+        <option value="loves working on art projects and takes great care with her work">Loves art — very careful and detail-oriented</option>
+        <option value="enjoys working on her art projects using all different mediums">Enjoys art — likes using different materials</option>
+        <option value="has really blossomed as an artist and takes her time with projects">Has really blossomed as an artist this year</option>
+        <option value="enjoys art but is still building her confidence with projects">Enjoys art — still building confidence</option>
+        <option value="">Skip — not notable</option>
       </select>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Independence skills</label>
-      <div class="checkbox-group" id="independence-checks">
-        <label><input type="checkbox" value="uses the bathroom independently"> bathroom independence</label>
-        <label><input type="checkbox" value="puts on and takes off her jacket independently"> jacket on/off</label>
-        <label><input type="checkbox" value="cleans up after snack time"> cleans up after snack</label>
-        <label><input type="checkbox" value="walks well in line"> walks in line well</label>
-        <label><input type="checkbox" value="is great about helping clean up the classroom"> helps clean classroom</label>
+      <label>What does this student enjoy outside? (check all that apply)</label>
+      <div class="pill-group" id="outdoor-checks">
+        <input type="checkbox" id="o1" value="running and climbing"><label for="o1">Running &amp; climbing</label>
+        <input type="checkbox" id="o2" value="digging in the dirt"><label for="o2">Digging in dirt</label>
+        <input type="checkbox" id="o3" value="playing soccer"><label for="o3">Soccer</label>
+        <input type="checkbox" id="o4" value="playing tag"><label for="o4">Tag</label>
+        <input type="checkbox" id="o5" value="riding bikes"><label for="o5">Bikes</label>
+        <input type="checkbox" id="o6" value="playing on the playground"><label for="o6">Playground</label>
       </div>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Additional motor notes (optional)</label>
-      <textarea id="motorExtra" placeholder="Anything else for this section..."></textarea>
+      <label>Independence skills this student has (check all that apply)</label>
+      <div class="pill-group" id="independence-checks">
+        <input type="checkbox" id="i1" value="uses the bathroom independently"><label for="i1">Bathroom independence</label>
+        <input type="checkbox" id="i2" value="puts on and takes off her jacket independently"><label for="i2">Jacket on/off</label>
+        <input type="checkbox" id="i3" value="cleans up after snack time"><label for="i3">Cleans up after snack</label>
+        <input type="checkbox" id="i4" value="walks well in line"><label for="i4">Walks in line</label>
+        <input type="checkbox" id="i5" value="is great about helping clean up the classroom"><label for="i5">Helps clean up classroom</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="motorExtra">Anything else to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="motorExtra" placeholder="Any extra details for this section..."></textarea>
     </div>
   </div>
-</div>
 
-<!-- ── LANGUAGE & COMMUNICATION ──────────────────────────────────────────── -->
-<div class="card">
-  <h2>Language &amp; Communication</h2>
-  <div class="row">
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 5 — Language & Communication
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step5" style="display:none">
+    <div class="card-title">Language &amp; Communication</div>
+    <div class="card-subtitle">How does this student communicate, participate, and show what they know?</div>
+
     <div class="field">
-      <label>Circle time participation</label>
+      <label for="circleTime">How is this student during circle time?</label>
       <select id="circleTime">
-        <option value="loves participating in circle time and really enjoys singing and dancing with her friends">Loves circle time, singing &amp; dancing</option>
-        <option value="is always engaged during circle time and loves singing and dancing">Always engaged, loves singing &amp; dancing</option>
+        <option value="loves participating in circle time and really enjoys singing and dancing with her friends">Loves it — always singing and dancing</option>
+        <option value="is always engaged during circle time and loves singing and dancing">Always engaged and loves singing</option>
         <option value="is beginning to participate more during circle time">Beginning to participate more</option>
-        <option value="enjoys circle time and follows along well">Enjoys circle time, follows along</option>
+        <option value="enjoys circle time and follows along well">Enjoys it and follows along well</option>
       </select>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Language development</label>
+      <label for="langDev">How is this student's language developing?</label>
       <select id="langDev">
-        <option value="expresses her wants and needs well with her friends and teachers">Expresses wants/needs well</option>
-        <option value="has shown great improvement in expressing her wants and needs">Improved in expressing wants/needs</option>
-        <option value="is working on using her words to express her wants and needs">Working on using words more</option>
-        <option value="has developed her language immensely and loves to tell stories">Language developed immensely, loves stories</option>
-        <option value="has been talking more in class and is growing more confident">Talking more, growing confident</option>
+        <option value="expresses her wants and needs well with her friends and teachers">Expresses wants and needs well</option>
+        <option value="has shown great improvement in expressing her wants and needs">Has improved a lot in expressing needs</option>
+        <option value="is working on using her words to express her wants and needs">Still working on using words more</option>
+        <option value="has developed her language immensely and loves to tell stories">Language has developed immensely — loves telling stories</option>
+        <option value="has been talking more in class and is growing more confident">Talking more and growing more confident</option>
       </select>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Academic recognition</label>
-      <div class="checkbox-group" id="academic-checks">
-        <label><input type="checkbox" value="recognizes her name"> recognizes name</label>
-        <label><input type="checkbox" value="has a good handle on her colors"> knows colors</label>
-        <label><input type="checkbox" value="has a good handle on her shapes"> knows shapes</label>
-        <label><input type="checkbox" value="can count to 10"> counts to 10</label>
-        <label><input type="checkbox" value="loves reading books"> loves books</label>
+      <label>What does this student recognize? (check all that apply)</label>
+      <div class="pill-group" id="academic-checks">
+        <input type="checkbox" id="a1" value="recognizes her name"><label for="a1">Recognizes her name</label>
+        <input type="checkbox" id="a2" value="has a good handle on her colors"><label for="a2">Knows colors</label>
+        <input type="checkbox" id="a3" value="has a good handle on her shapes"><label for="a3">Knows shapes</label>
+        <input type="checkbox" id="a4" value="can count to 10"><label for="a4">Can count to 10</label>
+        <input type="checkbox" id="a5" value="loves reading books"><label for="a5">Loves books</label>
       </div>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Additional language notes (optional)</label>
-      <textarea id="langExtra" placeholder="Anything else for this section..."></textarea>
+      <label for="langExtra">Anything else to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="langExtra" placeholder="Any extra details for this section..."></textarea>
     </div>
   </div>
-</div>
 
-<!-- ── GOALS ──────────────────────────────────────────────────────────────── -->
-<div class="card">
-  <h2>Goals</h2>
-  <div class="row">
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 6 — Goals
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step6" style="display:none">
+    <div class="card-title">Goals &amp; Closing</div>
+    <div class="card-subtitle">What should parents focus on, and how should the comment close out?</div>
+
     <div class="field">
-      <label>Season-specific closing</label>
+      <label for="seasonGoal">How should the comment end?</label>
       <select id="seasonGoal">
-        <option value="summer">Summer closing (Spring comments)</option>
+        <option value="summer">Summer closing — "Have a wonderful summer!" (Spring comments)</option>
         <option value="continue">Mid-year encouragement (Fall comments)</option>
       </select>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Individual goals</label>
-      <div class="checkbox-group" id="goals-checks">
-        <label><input type="checkbox" value="fine motor skills (writing and scissors)"> fine motor / scissors</label>
-        <label><input type="checkbox" value="communication and independence"> communication &amp; independence</label>
-        <label><input type="checkbox" value="potty training"> potty training</label>
-        <label><input type="checkbox" value="using words to express wants and needs"> using words more</label>
-        <label><input type="checkbox" value="opening up and building confidence in class"> building confidence</label>
-        <label><input type="checkbox" value="turn-taking with friends"> turn-taking</label>
-        <label><input type="checkbox" value="reading together at home"> reading at home</label>
+      <label>Goals to mention to parents (check all that apply)</label>
+      <div class="pill-group" id="goals-checks">
+        <input type="checkbox" id="g1" value="fine motor skills (writing and scissors)"><label for="g1">Fine motor / scissors</label>
+        <input type="checkbox" id="g2" value="communication and independence"><label for="g2">Communication &amp; independence</label>
+        <input type="checkbox" id="g3" value="potty training"><label for="g3">Potty training</label>
+        <input type="checkbox" id="g4" value="using words to express wants and needs"><label for="g4">Using words more</label>
+        <input type="checkbox" id="g5" value="opening up and building confidence in class"><label for="g5">Building confidence</label>
+        <input type="checkbox" id="g6" value="turn-taking with friends"><label for="g6">Turn-taking</label>
+        <input type="checkbox" id="g7" value="reading together at home"><label for="g7">Reading at home</label>
       </div>
     </div>
-  </div>
-  <div class="row">
+
     <div class="field">
-      <label>Additional goals / notes (optional)</label>
-      <textarea id="goalsExtra" placeholder="Any specific goals or extra notes..."></textarea>
+      <label for="goalsExtra">Anything else to add? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="goalsExtra" placeholder="Any other goals or closing thoughts..."></textarea>
     </div>
   </div>
-</div>
 
-<!-- ── ACTION BUTTONS ─────────────────────────────────────────────────────── -->
-<div class="btn-row">
-  <button class="btn btn-add" onclick="addStudent()">+ Add Student to List</button>
-  <button class="btn btn-dl" id="dlBtn" onclick="downloadAll()" disabled>
-    Download All as Word Doc
-  </button>
-</div>
+  <!-- ── Queue ───────────────────────────────────────────────────────────── -->
+  <div class="queue-card" id="queueCard">
+    <div class="queue-header">
+      <div class="queue-title">Students Ready</div>
+      <div class="queue-badge" id="queueCount">0</div>
+    </div>
+    <ul class="queue-list" id="queueList"></ul>
+    <button class="download-btn" id="dlBtn" onclick="downloadAll()" disabled>
+      Download All Comments as Word Document
+    </button>
+  </div>
 
-<!-- ── STUDENT QUEUE ──────────────────────────────────────────────────────── -->
-<div class="card" id="queue-card">
-  <h2>Students Added (<span id="queue-count">0</span>)</h2>
-  <div id="success-banner" class="success-banner"></div>
-  <ul class="queue-list" id="queue-list"></ul>
-</div>
+  <!-- ── Preview of last-added student ─────────────────────────────────── -->
+  <div class="preview-card" id="previewCard">
+    <div class="preview-title">Preview — Last Added</div>
+    <div class="preview-body" id="previewBody"></div>
+  </div>
 
-<!-- ── PREVIEW ────────────────────────────────────────────────────────────── -->
-<div class="card" id="preview-card">
-  <h2>Preview — Last Added</h2>
-  <div id="comment-output"></div>
+</div><!-- /main -->
+
+<!-- ── Sticky nav ────────────────────────────────────────────────────────── -->
+<div class="sticky-nav">
+  <button class="nav-btn nav-btn-back" id="btnBack" onclick="goBack()" disabled>Back</button>
+  <button class="nav-btn nav-btn-next" id="btnNext" onclick="goNext()">Next &rarr;</button>
 </div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-const studentQueue = []; // array of { name, heading, opening, social, motor, lang, goals }
+// ── Wizard state ──────────────────────────────────────────────────────────
+let currentStep = 1;
+const TOTAL_STEPS = 6;
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+function showStep(n) {
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    document.getElementById(`step${i}`).style.display = (i === n) ? 'block' : 'none';
+  }
+
+  // Update stepper dots
+  document.querySelectorAll('.step-item').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (s === n) el.classList.add('active');
+    else if (s < n) el.classList.add('done');
+  });
+
+  document.getElementById('stepCounter').textContent = `Step ${n} of ${TOTAL_STEPS}`;
+
+  // Update nav buttons
+  document.getElementById('btnBack').disabled = (n === 1);
+  const btnNext = document.getElementById('btnNext');
+  if (n === TOTAL_STEPS) {
+    btnNext.textContent = 'Add Student';
+    btnNext.className = 'nav-btn nav-btn-add';
+  } else {
+    btnNext.textContent = 'Next \u2192';
+    btnNext.className = 'nav-btn nav-btn-next';
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  currentStep = n;
+}
+
+function goNext() {
+  if (currentStep === 1) {
+    if (!val('firstName') || !val('lastName')) {
+      alert('Please enter the student\'s first and last name before continuing.');
+      return;
+    }
+  }
+  if (currentStep < TOTAL_STEPS) {
+    showStep(currentStep + 1);
+  } else {
+    addStudent();
+  }
+}
+
+function goBack() {
+  if (currentStep > 1) showStep(currentStep - 1);
+}
+
+// ── Student queue state ───────────────────────────────────────────────────
+const studentQueue = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 function val(id) { return document.getElementById(id).value.trim(); }
 
 function checked(groupId) {
@@ -535,12 +891,12 @@ function joinList(arr) {
 
 function pronouns(p) {
   return {
-    Pro:  p === 'she' ? 'She'     : p === 'he' ? 'He'   : 'They',
-    pro:  p === 'she' ? 'she'     : p === 'he' ? 'he'   : 'they',
-    pos:  p === 'she' ? 'her'     : p === 'he' ? 'his'  : 'their',
-    Pos:  p === 'she' ? 'Her'     : p === 'he' ? 'His'  : 'Their',
-    refl: p === 'she' ? 'herself' : p === 'he' ? 'himself' : 'themselves',
-    noun: p === 'she' ? 'girl'    : p === 'he' ? 'boy'  : 'child',
+    Pro:  p === 'she' ? 'She'      : p === 'he' ? 'He'      : 'They',
+    pro:  p === 'she' ? 'she'      : p === 'he' ? 'he'      : 'they',
+    pos:  p === 'she' ? 'her'      : p === 'he' ? 'his'     : 'their',
+    Pos:  p === 'she' ? 'Her'      : p === 'he' ? 'His'     : 'Their',
+    refl: p === 'she' ? 'herself'  : p === 'he' ? 'himself' : 'themselves',
+    noun: p === 'she' ? 'girl'     : p === 'he' ? 'boy'     : 'child',
   };
 }
 
@@ -554,20 +910,14 @@ function fixP(text, pn) {
     .replace(/\bgirl\b/g, pn.noun).replace(/\bboy\b/g, pn.noun);
 }
 
-// ── Comment builder ────────────────────────────────────────────────────────
+// ── Build comment from form ───────────────────────────────────────────────
 function buildStudent() {
   const firstName = val('firstName');
   const lastName  = val('lastName');
   const season    = val('season');
   const year      = val('year');
   const p         = val('pronoun');
-
-  if (!firstName || !lastName || !year) {
-    alert('Please fill in the student name and year.');
-    return null;
-  }
-
-  const pn = pronouns(p);
+  const pn        = pronouns(p);
 
   // Opening
   const personalities  = checked('personality-checks');
@@ -595,10 +945,10 @@ function buildStudent() {
   if (!social) social = `${firstName} engages well with ${pn.pos} classmates and enjoys all of our classroom activities.`;
 
   // Fine & Gross Motor
-  const outdoorActs  = checked('outdoor-checks');
-  const artLevel     = fixP(val('artLevel'), pn);
-  const indepItems   = checked('independence-checks').map(s => fixP(s, pn));
-  const motorExtra   = val('motorExtra');
+  const outdoorActs = checked('outdoor-checks');
+  const artLevel    = fixP(val('artLevel'), pn);
+  const indepItems  = checked('independence-checks').map(s => fixP(s, pn));
+  const motorExtra  = val('motorExtra');
 
   let motor = '';
   if (artLevel) motor += `${firstName} ${artLevel}. `;
@@ -638,7 +988,7 @@ function buildStudent() {
   if (goalsExtra) goals += ` ${goalsExtra}`;
 
   return {
-    name: `${firstName} ${lastName}`,
+    name:    `${firstName} ${lastName}`,
     firstName,
     heading: `Miss Vicky's Class Comments ${season} ${year}`,
     opening: opening.trim(),
@@ -649,29 +999,39 @@ function buildStudent() {
   };
 }
 
-// ── Add student to queue ───────────────────────────────────────────────────
+// ── Add student ───────────────────────────────────────────────────────────
 function addStudent() {
   const s = buildStudent();
   if (!s) return;
 
   studentQueue.push(s);
   renderQueue();
-  showPreview(s);
-  clearForm();
 
-  // Show success banner
-  const banner = document.getElementById('success-banner');
-  banner.textContent = `${s.name} added! Fill in the next student, or click Download All when you're done.`;
+  // Show preview
+  const text = [
+    s.name + '      ' + s.heading, '',
+    s.opening, '',
+    'Social & Emotional Skills', s.social, '',
+    'Fine & Gross Motor Skills', s.motor, '',
+    'Language & Communication',  s.lang,  '',
+    'Goals', s.goals,
+  ].join('\n');
+  document.getElementById('previewBody').textContent = text;
+  document.getElementById('previewCard').style.display = 'block';
+
+  // Success banner
+  const banner = document.getElementById('successBanner');
+  banner.textContent = `${s.name} has been added! Fill in the next student, or tap Download All when you're done.`;
   banner.style.display = 'block';
 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  clearForm();
+  showStep(1);
 }
 
 function renderQueue() {
-  const list  = document.getElementById('queue-list');
-  const card  = document.getElementById('queue-card');
+  const list  = document.getElementById('queueList');
+  const card  = document.getElementById('queueCard');
   const dlBtn = document.getElementById('dlBtn');
-  const count = document.getElementById('queue-count');
 
   list.innerHTML = '';
   studentQueue.forEach((s, i) => {
@@ -686,7 +1046,7 @@ function renderQueue() {
     list.appendChild(li);
   });
 
-  count.textContent = studentQueue.length;
+  document.getElementById('queueCount').textContent = studentQueue.length;
   card.style.display = studentQueue.length ? 'block' : 'none';
   dlBtn.disabled = studentQueue.length === 0;
 }
@@ -695,32 +1055,9 @@ function removeStudent(i) {
   studentQueue.splice(i, 1);
   renderQueue();
   if (studentQueue.length === 0) {
-    document.getElementById('preview-card').style.display = 'none';
-    document.getElementById('success-banner').style.display = 'none';
+    document.getElementById('previewCard').style.display = 'none';
+    document.getElementById('successBanner').style.display = 'none';
   }
-}
-
-function showPreview(s) {
-  const text = [
-    s.name + '      ' + s.heading,
-    '',
-    s.opening,
-    '',
-    'Social & Emotional Skills',
-    s.social,
-    '',
-    'Fine & Gross Motor Skills',
-    s.motor,
-    '',
-    'Language & Communication',
-    s.lang,
-    '',
-    'Goals',
-    s.goals,
-  ].join('\n');
-
-  document.getElementById('comment-output').textContent = text;
-  document.getElementById('preview-card').style.display = 'block';
 }
 
 function clearForm() {
@@ -729,28 +1066,26 @@ function clearForm() {
   document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
   document.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
   document.getElementById('year').value = '2025';
-  document.getElementById('firstName').focus();
 }
 
-// ── DOCX generation (JSZip + raw OOXML) ───────────────────────────────────
-
+// ── DOCX generation ───────────────────────────────────────────────────────
 function esc(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function xmlPara(children, spacingBefore, spacingAfter) {
-  const before = spacingBefore ? `<w:before w:val="${spacingBefore}"/>` : '';
-  const after  = spacingAfter  ? `<w:after w:val="${spacingAfter}"/>` : '';
-  const spacing = (before || after) ? `<w:pPr><w:spacing ${before} ${after}/></w:pPr>` : '';
-  return `<w:p>${spacing}${children}</w:p>`;
+function xmlPara(children, before, after) {
+  const b = before ? `<w:before w:val="${before}"/>` : '';
+  const a = after  ? `<w:after w:val="${after}"/>` : '';
+  const sp = (b || a) ? `<w:pPr><w:spacing ${b}${a}/></w:pPr>` : '';
+  return `<w:p>${sp}${children}</w:p>`;
 }
 
 function xmlRun(text, opts = {}) {
-  const bold      = opts.bold      ? '<w:b/><w:bCs/>' : '';
-  const underline = opts.underline ? '<w:u w:val="single"/>' : '';
-  const size      = opts.size      ? `<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>` : '<w:sz w:val="24"/><w:szCs w:val="24"/>';
-  const font      = `<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>`;
-  return `<w:r><w:rPr>${font}${bold}${underline}${size}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
+  const bold = opts.bold ? '<w:b/><w:bCs/>' : '';
+  const ul   = opts.underline ? '<w:u w:val="single"/>' : '';
+  const sz   = opts.size ? `<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>` : '<w:sz w:val="24"/><w:szCs w:val="24"/>';
+  const font = `<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>`;
+  return `<w:r><w:rPr>${font}${bold}${ul}${sz}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
 }
 
 function pageBreak() {
@@ -758,28 +1093,19 @@ function pageBreak() {
 }
 
 function studentToXml(s) {
-  const parts = [];
-
-  // Name + heading line
-  parts.push(xmlPara(
-    xmlRun(s.name, { bold: true, size: 28 }) + xmlRun('      ' + s.heading, { bold: true, size: 24 }),
-    0, 160
-  ));
-
-  // Opening
-  parts.push(xmlPara(xmlRun(s.opening), 0, 120));
-
-  // Sections
-  const sections = [
-    { header: 'Social & Emotional Skills',  body: s.social },
-    { header: 'Fine & Gross Motor Skills',  body: s.motor  },
-    { header: 'Language & Communication',   body: s.lang   },
-    { header: 'Goals',                      body: s.goals  },
+  const parts = [
+    xmlPara(xmlRun(s.name, {bold:true, size:28}) + xmlRun('      ' + s.heading, {bold:true, size:24}), 0, 160),
+    xmlPara(xmlRun(s.opening), 0, 120),
   ];
 
-  sections.forEach(sec => {
-    parts.push(xmlPara(xmlRun(sec.header, { bold: true, underline: true }), 200, 80));
-    parts.push(xmlPara(xmlRun(sec.body), 0, 120));
+  [
+    ['Social & Emotional Skills', s.social],
+    ['Fine & Gross Motor Skills',  s.motor],
+    ['Language & Communication',   s.lang],
+    ['Goals',                      s.goals],
+  ].forEach(([header, body]) => {
+    parts.push(xmlPara(xmlRun(header, {bold:true, underline:true}), 200, 80));
+    parts.push(xmlPara(xmlRun(body), 0, 120));
   });
 
   return parts.join('\n');
@@ -788,17 +1114,11 @@ function studentToXml(s) {
 async function downloadAll() {
   if (!studentQueue.length) return;
 
-  // Build document body XML
-  const bodyParts = [];
-  studentQueue.forEach((s, i) => {
-    if (i > 0) bodyParts.push(pageBreak());
-    bodyParts.push(studentToXml(s));
-  });
+  const bodyParts = studentQueue.map((s, i) => (i > 0 ? pageBreak() : '') + studentToXml(s));
 
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    ${bodyParts.join('\n')}
+  <w:body>${bodyParts.join('\n')}
     <w:sectPr>
       <w:pgSz w:w="12240" w:h="15840"/>
       <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
@@ -831,7 +1151,7 @@ async function downloadAll() {
   const zipData = await zip.generateAsync({ type: 'arraybuffer' });
   const blob = new Blob([zipData], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 
-  const season = studentQueue[0].heading.split(' ').slice(-2).join('');
+  const season   = studentQueue[0].heading.split(' ').slice(-2).join('');
   const filename = `MissVicky_Comments_${season}.docx`;
 
   const url = URL.createObjectURL(blob);
