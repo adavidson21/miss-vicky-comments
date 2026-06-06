@@ -530,7 +530,7 @@
 </div>
 <div class="season-bar">
   <label for="globalSeason">Semester:</label>
-  <select id="globalSeason" onchange="syncSeasonGoalDefault()">
+  <select id="globalSeason">
     <option value="Fall">Fall</option>
     <option value="Spring">Spring</option>
   </select>
@@ -797,14 +797,6 @@
     <div class="card-subtitle">What should parents focus on, and how should the comment close out?</div>
 
     <div class="field">
-      <label for="seasonGoal">How should the comment end?</label>
-      <select id="seasonGoal">
-        <option value="summer">Summer closing — "Have a wonderful summer!" (Spring comments)</option>
-        <option value="continue">Mid-year encouragement (Fall comments)</option>
-      </select>
-    </div>
-
-    <div class="field">
       <label>Goals to mention to parents (check all that apply)</label>
       <div class="pill-group" id="goals-checks">
         <input type="checkbox" id="g1" value="fine motor skills (writing and scissors)"><label for="g1">Fine motor / scissors</label>
@@ -1039,7 +1031,7 @@ function buildStudent() {
   if (!lang) lang = `${firstName} is growing in ${pn.pos} language and communication skills.`;
 
   // Goals
-  const seasonGoal = val('seasonGoal');
+  const seasonGoal = val('globalSeason') === 'Spring' ? 'summer' : 'continue';
   const goalItems  = checked('goals-checks').map(s => fixP(s, pn));
   const goalsExtra = val('goalsExtra');
 
@@ -1130,23 +1122,16 @@ function removeStudent(i) {
   }
 }
 
-function syncSeasonGoalDefault() {
-  const season = val('globalSeason');
-  const sg = document.getElementById('seasonGoal');
-  if (sg) sg.value = season === 'Spring' ? 'summer' : 'continue';
-}
-
 function clearForm() {
   document.querySelectorAll('input[type=text]').forEach(el => el.value = '');
   document.querySelectorAll('textarea').forEach(el => el.value = '');
   document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
   // Reset per-student selects only (not global season/year)
-  ['adjustment','socialOpener','socialChallenge','artLevel','circleTime','langDev','seasonGoal'].forEach(id => {
+  ['adjustment','socialOpener','socialChallenge','artLevel','circleTime','langDev'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.selectedIndex = 0;
   });
   document.getElementById('pronoun').selectedIndex = 0;
-  syncSeasonGoalDefault();
 }
 
 // ── Word document generation ──────────────────────────────────────────────
@@ -1274,7 +1259,6 @@ window.addEventListener('DOMContentLoaded', () => {
       `Welcome back! You have ${studentQueue.length} student${studentQueue.length > 1 ? 's' : ''} saved. Keep going or download when ready.`;
     document.getElementById('successBanner').style.display = 'block';
   }
-  syncSeasonGoalDefault();
 });
 </script>
 </body>
