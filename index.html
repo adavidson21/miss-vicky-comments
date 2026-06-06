@@ -1074,9 +1074,11 @@ function esc(str) {
 }
 
 function xmlPara(children, before, after) {
-  const b = before ? `<w:before w:val="${before}"/>` : '';
-  const a = after  ? `<w:after w:val="${after}"/>` : '';
-  const sp = (b || a) ? `<w:pPr><w:spacing ${b}${a}/></w:pPr>` : '';
+  const attrs = [
+    before ? `w:before="${before}"` : '',
+    after  ? `w:after="${after}"`   : '',
+  ].filter(Boolean).join(' ');
+  const sp = attrs ? `<w:pPr><w:spacing ${attrs}/></w:pPr>` : '';
   return `<w:p>${sp}${children}</w:p>`;
 }
 
