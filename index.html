@@ -1145,8 +1145,11 @@ async function downloadAll() {
     WidthType, VerticalAlign, ShadingType,
   } = docx;
 
-  // Page content width: 8.5" - 0.85" * 2 = 6.8" = 9792 DXA
-  const CONTENT_W = 9792;
+  // Percentage widths in OOXML 50ths-of-a-percent (5000 = 100%)
+  // Use PCT so both Word and Google Docs handle layout correctly
+  const W100 = { size: 5000, type: WidthType.PERCENTAGE }; // 100%
+  const W44  = { size: 2200, type: WidthType.PERCENTAGE }; // 44% (name column)
+  const W56  = { size: 2800, type: WidthType.PERCENTAGE }; // 56% (pills column)
 
   const NO_BORDER = {
     top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -1178,7 +1181,7 @@ async function downloadAll() {
     });
 
     return new Table({
-      width: { size: CONTENT_W, type: WidthType.DXA },
+      width: W100,
       borders: {
         top:     { style: BorderStyle.NONE, size: 0 },
         bottom:  { style: BorderStyle.NONE, size: 0 },
@@ -1191,7 +1194,7 @@ async function downloadAll() {
         // Title row
         new TableRow({
           children: [new TableCell({
-            width: { size: CONTENT_W, type: WidthType.DXA },
+            width: W100,
             borders: outerBorder(20),
             shading: { type: ShadingType.CLEAR, color: 'auto', fill: bgColor },
             children: [new Paragraph({
@@ -1211,7 +1214,7 @@ async function downloadAll() {
         // Body row
         new TableRow({
           children: [new TableCell({
-            width: { size: CONTENT_W, type: WidthType.DXA },
+            width: W100,
             borders: outerBorder(12),
             children: [new Paragraph({
               spacing: { before: 140, after: 140 },
@@ -1243,7 +1246,7 @@ async function downloadAll() {
 
     // Header: 2-column table (name | pills)
     allChildren.push(new Table({
-      width: { size: CONTENT_W, type: WidthType.DXA },
+      width: W100,
       borders: {
         top:     { style: BorderStyle.NONE, size: 0 },
         bottom:  { style: BorderStyle.NONE, size: 0 },
@@ -1254,9 +1257,9 @@ async function downloadAll() {
       },
       rows: [new TableRow({
         children: [
-          // Left cell: student name
+          // Left cell: student name (W44 = 44%)
           new TableCell({
-            width: { size: Math.round(CONTENT_W * 0.44), type: WidthType.DXA },
+            width: W44,
             verticalAlign: VerticalAlign.TOP,
             borders: NO_BORDER,
             children: [
@@ -1276,9 +1279,9 @@ async function downloadAll() {
               }),
             ],
           }),
-          // Right cell: pill labels
+          // Right cell: pill labels (W56 = 56%)
           new TableCell({
-            width: { size: Math.round(CONTENT_W * 0.56), type: WidthType.DXA },
+            width: W56,
             verticalAlign: VerticalAlign.CENTER,
             borders: NO_BORDER,
             children: [
