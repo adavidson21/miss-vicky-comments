@@ -1145,17 +1145,28 @@ async function downloadAll() {
     WidthType, VerticalAlign, ShadingType,
   } = docx;
 
-  // Percentage widths in OOXML 50ths-of-a-percent (5000 = 100%)
-  // Use PCT so both Word and Google Docs handle layout correctly
-  const W100 = { size: 5000, type: WidthType.PERCENTAGE }; // 100%
-  const W44  = { size: 2200, type: WidthType.PERCENTAGE }; // 44% (name column)
-  const W56  = { size: 2800, type: WidthType.PERCENTAGE }; // 56% (pills column)
+  // Standard 1" margins (1440 DXA each). US Letter = 12240 DXA wide.
+  // Content width = 12240 - 1440*2 = 9360 DXA.
+  // columnWidths generates <w:tblGrid> which Google Docs requires for layout.
+  const MARGIN   = 1440;
+  const COL_FULL = 9360;
+  const COL_LEFT = 4118;  // 44% of 9360
+  const COL_RIGHT = 5242; // 56% of 9360
 
   const NO_BORDER = {
     top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
     bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
     left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
     right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+
+  const NO_TABLE_BORDER = {
+    top:     { style: BorderStyle.NONE, size: 0 },
+    bottom:  { style: BorderStyle.NONE, size: 0 },
+    left:    { style: BorderStyle.NONE, size: 0 },
+    right:   { style: BorderStyle.NONE, size: 0 },
+    insideH: { style: BorderStyle.NONE, size: 0 },
+    insideV: { style: BorderStyle.NONE, size: 0 },
   };
 
   function pillPara(text, spacingAfter) {
@@ -1181,20 +1192,14 @@ async function downloadAll() {
     });
 
     return new Table({
-      width: W100,
-      borders: {
-        top:     { style: BorderStyle.NONE, size: 0 },
-        bottom:  { style: BorderStyle.NONE, size: 0 },
-        left:    { style: BorderStyle.NONE, size: 0 },
-        right:   { style: BorderStyle.NONE, size: 0 },
-        insideH: { style: BorderStyle.NONE, size: 0 },
-        insideV: { style: BorderStyle.NONE, size: 0 },
-      },
+      columnWidths: [COL_FULL],
+      width: { size: COL_FULL, type: WidthType.DXA },
+      borders: NO_TABLE_BORDER,
       rows: [
         // Title row
         new TableRow({
           children: [new TableCell({
-            width: W100,
+            width: { size: COL_FULL, type: WidthType.DXA },
             borders: outerBorder(20),
             shading: { type: ShadingType.CLEAR, color: 'auto', fill: bgColor },
             children: [new Paragraph({
@@ -1214,7 +1219,7 @@ async function downloadAll() {
         // Body row
         new TableRow({
           children: [new TableCell({
-            width: W100,
+            width: { size: COL_FULL, type: WidthType.DXA },
             borders: outerBorder(12),
             children: [new Paragraph({
               spacing: { before: 140, after: 140 },
@@ -1246,20 +1251,14 @@ async function downloadAll() {
 
     // Header: 2-column table (name | pills)
     allChildren.push(new Table({
-      width: W100,
-      borders: {
-        top:     { style: BorderStyle.NONE, size: 0 },
-        bottom:  { style: BorderStyle.NONE, size: 0 },
-        left:    { style: BorderStyle.NONE, size: 0 },
-        right:   { style: BorderStyle.NONE, size: 0 },
-        insideH: { style: BorderStyle.NONE, size: 0 },
-        insideV: { style: BorderStyle.NONE, size: 0 },
-      },
+      columnWidths: [COL_LEFT, COL_RIGHT], // generates <w:tblGrid> for Google Docs
+      width: { size: COL_FULL, type: WidthType.DXA },
+      borders: NO_TABLE_BORDER,
       rows: [new TableRow({
         children: [
-          // Left cell: student name (W44 = 44%)
+          // Left cell: student name (~44%)
           new TableCell({
-            width: W44,
+            width: { size: COL_LEFT, type: WidthType.DXA },
             verticalAlign: VerticalAlign.TOP,
             borders: NO_BORDER,
             children: [
@@ -1279,9 +1278,9 @@ async function downloadAll() {
               }),
             ],
           }),
-          // Right cell: pill labels (W56 = 56%)
+          // Right cell: pill labels (~56%)
           new TableCell({
-            width: W56,
+            width: { size: COL_RIGHT, type: WidthType.DXA },
             verticalAlign: VerticalAlign.CENTER,
             borders: NO_BORDER,
             children: [
@@ -1318,7 +1317,7 @@ async function downloadAll() {
   const doc = new Document({
     sections: [{
       properties: {
-        page: { margin: { top: 1224, bottom: 1224, left: 1224, right: 1224 } },
+        page: { margin: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN } },
       },
       children: allChildren,
     }],
