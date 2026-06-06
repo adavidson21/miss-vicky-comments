@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Miss Vicky's Comment Generator</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
   <style>
     :root {
       --green:       #7c5cbf;
@@ -1134,113 +1135,195 @@ function clearForm() {
   document.getElementById('pronoun').selectedIndex = 0;
 }
 
-// ── Word document generation ──────────────────────────────────────────────
-function esc(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function sectionBox(title, body, borderColor, bgColor) {
-  return `
-  <table width="100%" cellpadding="0" cellspacing="0"
-         style="border: 2.5pt solid ${borderColor}; border-collapse: collapse; margin-bottom: 16pt;">
-    <tr>
-      <td align="center"
-          style="background-color: ${bgColor}; padding: 7pt 16pt;
-                 font-family: 'Courier New', Courier, monospace;
-                 font-size: 10pt; font-weight: bold; letter-spacing: 1.5pt;
-                 text-transform: uppercase; color: #222222;
-                 border-bottom: 1.5pt solid ${borderColor};">
-        ${title}
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 14pt 16pt; font-family: 'Times New Roman', Times, serif;
-                 font-size: 11pt; line-height: 1.65; height: 72pt; vertical-align: top;">
-        ${esc(body)}
-      </td>
-    </tr>
-  </table>`;
-}
-
-function studentToDocHtml(s, isFirst) {
-  const nameParts  = s.name.split(' ');
-  const firstName  = esc(nameParts[0] || '');
-  const lastName   = esc(nameParts.slice(1).join(' ') || '');
-  const headParts  = s.heading.split(' ');           // e.g. ["Miss","Vicky's","Class","Comments","Fall","2025"]
-  const seasonYear = headParts.slice(-2).join(' ');  // "Fall 2025"
-
-  const header = `
-  <table width="100%" cellpadding="0" cellspacing="0"
-         style="border: none; margin-bottom: 18pt; border-collapse: collapse;">
-    <tr>
-      <td width="44%" valign="top" style="border: none; padding-right: 16pt;">
-        <p style="margin: 0; font-family: Arial Black, Arial, sans-serif;
-                  font-size: 24pt; font-weight: 900; color: #4a3a8a;
-                  text-transform: uppercase; letter-spacing: 1pt; line-height: 1.2;">
-          ${firstName}<br>${lastName}
-        </p>
-      </td>
-      <td width="56%" valign="middle" style="border: none;">
-        <p style="margin: 0 0 7pt 0; padding: 5pt 14pt;
-                  border: 1.5pt solid #4a3a8a; border-radius: 20pt;
-                  font-family: Arial, sans-serif; font-size: 10pt; color: #333;">
-          Miss Vicky's Class
-        </p>
-        <p style="margin: 0 0 7pt 0; padding: 5pt 14pt;
-                  border: 1.5pt solid #4a3a8a; border-radius: 20pt;
-                  font-family: Arial, sans-serif; font-size: 10pt; color: #333;">
-          Comments
-        </p>
-        <p style="margin: 0; padding: 5pt 14pt;
-                  border: 1.5pt solid #4a3a8a; border-radius: 20pt;
-                  font-family: Arial, sans-serif; font-size: 10pt; color: #333;">
-          ${esc(seasonYear)}
-        </p>
-      </td>
-    </tr>
-  </table>`;
-
-  const opening = `
-  <p style="margin: 0 0 16pt 0; font-family: 'Times New Roman', Times, serif;
-            font-size: 11pt; line-height: 1.65; color: #222;">
-    ${esc(s.opening)}
-  </p>`;
-
-  const boxes = [
-    sectionBox('Social &amp; Emotional Skills', s.social, '#8b2020', '#e8b4b4'),
-    sectionBox('Fine &amp; Gross Motor Skills',  s.motor,  '#b8900a', '#f5e89a'),
-    sectionBox('Language &amp; Communication',   s.lang,   '#3d6b2a', '#b8d4a8'),
-    sectionBox('Goals',                          s.goals,  '#1e4d7a', '#a8c4e0'),
-  ].join('');
-
-  const pageBreak = isFirst ? '' : '<p style="page-break-before: always; margin:0; padding:0;">&nbsp;</p>';
-
-  return pageBreak + header + opening + boxes;
-}
-
-function downloadAll() {
+// ── Word document generation (docx.js v7) ────────────────────────────────
+async function downloadAll() {
   if (!studentQueue.length) return;
 
-  const body = studentQueue.map((s, i) => studentToDocHtml(s, i === 0)).join('\n');
+  const {
+    Document, Packer, Table, TableRow, TableCell,
+    Paragraph, TextRun, BorderStyle, AlignmentType,
+    WidthType, VerticalAlign, ShadingType,
+  } = docx;
 
-  const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
-  xmlns:w='urn:schemas-microsoft-com:office:word'
-  xmlns='http://www.w3.org/TR/REC-html40'>
-<head>
-<meta charset='utf-8'>
-<title>Miss Vicky's Class Comments</title>
-<style>
-  @page { size: 8.5in 11in; margin: 0.85in; }
-  body { margin: 0; padding: 0; background: white; }
-  table { border-spacing: 0; }
-</style>
-</head>
-<body>${body}</body>
-</html>`;
+  // Page content width: 8.5" - 0.85" * 2 = 6.8" = 9792 DXA
+  const CONTENT_W = 9792;
 
-  const blob     = new Blob([doc], { type: 'application/msword' });
+  const NO_BORDER = {
+    top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+
+  function pillPara(text, spacingAfter) {
+    return new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      spacing: { after: spacingAfter },
+      border: {
+        top:    { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 4 },
+        left:   { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 8 },
+        right:  { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 8 },
+      },
+      children: [new TextRun({ text, font: 'Calibri', size: 20, color: '333333' })],
+    });
+  }
+
+  function makeSectionTable(title, body, borderColor, bgColor) {
+    const outerBorder = (topSize) => ({
+      top:    { style: BorderStyle.SINGLE, size: topSize, color: borderColor },
+      bottom: { style: BorderStyle.SINGLE, size: 20,      color: borderColor },
+      left:   { style: BorderStyle.SINGLE, size: 20,      color: borderColor },
+      right:  { style: BorderStyle.SINGLE, size: 20,      color: borderColor },
+    });
+
+    return new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      borders: {
+        top:     { style: BorderStyle.NONE, size: 0 },
+        bottom:  { style: BorderStyle.NONE, size: 0 },
+        left:    { style: BorderStyle.NONE, size: 0 },
+        right:   { style: BorderStyle.NONE, size: 0 },
+        insideH: { style: BorderStyle.NONE, size: 0 },
+        insideV: { style: BorderStyle.NONE, size: 0 },
+      },
+      rows: [
+        // Title row
+        new TableRow({
+          children: [new TableCell({
+            width: { size: CONTENT_W, type: WidthType.DXA },
+            borders: outerBorder(20),
+            shading: { type: ShadingType.CLEAR, color: 'auto', fill: bgColor },
+            children: [new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 80, after: 80 },
+              children: [new TextRun({
+                text: title,
+                font: 'Century Gothic',
+                bold: true,
+                size: 18,
+                color: '222222',
+                characterSpacing: 25,
+              })],
+            })],
+          })],
+        }),
+        // Body row
+        new TableRow({
+          children: [new TableCell({
+            width: { size: CONTENT_W, type: WidthType.DXA },
+            borders: outerBorder(12),
+            children: [new Paragraph({
+              spacing: { before: 140, after: 140 },
+              children: [new TextRun({ text: body, font: 'Calibri', size: 22, color: '222222' })],
+            })],
+          })],
+        }),
+      ],
+    });
+  }
+
+  const allChildren = [];
+
+  studentQueue.forEach((s, i) => {
+    const nameParts  = s.name.split(' ');
+    const firstName  = nameParts[0] || '';
+    const lastName   = nameParts.slice(1).join(' ') || '';
+    const headParts  = s.heading.split(' ');
+    const seasonYear = headParts.slice(-2).join(' ');
+
+    // Page break before every student except the first
+    if (i > 0) {
+      allChildren.push(new Paragraph({
+        pageBreakBefore: true,
+        spacing: { before: 0, after: 0 },
+        children: [new TextRun({ text: '', size: 1 })],
+      }));
+    }
+
+    // Header: 2-column table (name | pills)
+    allChildren.push(new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      borders: {
+        top:     { style: BorderStyle.NONE, size: 0 },
+        bottom:  { style: BorderStyle.NONE, size: 0 },
+        left:    { style: BorderStyle.NONE, size: 0 },
+        right:   { style: BorderStyle.NONE, size: 0 },
+        insideH: { style: BorderStyle.NONE, size: 0 },
+        insideV: { style: BorderStyle.NONE, size: 0 },
+      },
+      rows: [new TableRow({
+        children: [
+          // Left cell: student name
+          new TableCell({
+            width: { size: Math.round(CONTENT_W * 0.44), type: WidthType.DXA },
+            verticalAlign: VerticalAlign.TOP,
+            borders: NO_BORDER,
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: [new TextRun({
+                  text: firstName.toUpperCase(),
+                  font: 'Century Gothic', bold: true, size: 52, color: '4a3a8a',
+                })],
+              }),
+              new Paragraph({
+                spacing: { before: 0, after: 140 },
+                children: [new TextRun({
+                  text: lastName.toUpperCase(),
+                  font: 'Century Gothic', bold: true, size: 52, color: '4a3a8a',
+                })],
+              }),
+            ],
+          }),
+          // Right cell: pill labels
+          new TableCell({
+            width: { size: Math.round(CONTENT_W * 0.56), type: WidthType.DXA },
+            verticalAlign: VerticalAlign.CENTER,
+            borders: NO_BORDER,
+            children: [
+              pillPara("Miss Vicky's Class", 55),
+              pillPara('Comments', 55),
+              pillPara(seasonYear, 0),
+            ],
+          }),
+        ],
+      })],
+    }));
+
+    // Opening paragraph
+    allChildren.push(new Paragraph({
+      spacing: { before: 180, after: 180 },
+      children: [new TextRun({ text: s.opening, font: 'Calibri', size: 22, color: '222222' })],
+    }));
+
+    // Section boxes
+    const secs = [
+      { title: 'SOCIAL & EMOTIONAL SKILLS', body: s.social, border: '8b2020', bg: 'e8b4b4' },
+      { title: 'FINE & GROSS MOTOR SKILLS',  body: s.motor,  border: 'b8900a', bg: 'f5e89a' },
+      { title: 'LANGUAGE & COMMUNICATION',   body: s.lang,   border: '3d6b2a', bg: 'b8d4a8' },
+      { title: 'GOALS',                      body: s.goals,  border: '1e4d7a', bg: 'a8c4e0' },
+    ];
+    secs.forEach((sec, si) => {
+      allChildren.push(makeSectionTable(sec.title, sec.body, sec.border, sec.bg));
+      if (si < secs.length - 1) {
+        allChildren.push(new Paragraph({ spacing: { before: 0, after: 100 } }));
+      }
+    });
+  });
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: { margin: { top: 1224, bottom: 1224, left: 1224, right: 1224 } },
+      },
+      children: allChildren,
+    }],
+  });
+
+  const blob     = await Packer.toBlob(doc);
   const season   = val('globalSeason') + val('globalYear');
-  const filename = `MissVicky_Comments_${season}.doc`;
+  const filename = `MissVicky_Comments_${season}.docx`;
   const url      = URL.createObjectURL(blob);
   const a        = document.createElement('a');
   a.href         = url;
