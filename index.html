@@ -818,12 +818,18 @@ async function downloadAll() {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`;
 
+  const wordRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`;
+
   const zip = new JSZip();
   zip.file('[Content_Types].xml', contentTypes);
   zip.file('_rels/.rels', rels);
   zip.file('word/document.xml', documentXml);
+  zip.file('word/_rels/document.xml.rels', wordRels);
 
-  const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const zipData = await zip.generateAsync({ type: 'arraybuffer' });
+  const blob = new Blob([zipData], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 
   const season = studentQueue[0].heading.split(' ').slice(-2).join('');
   const filename = `MissVicky_Comments_${season}.docx`;
