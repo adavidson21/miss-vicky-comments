@@ -833,6 +833,13 @@
     <button class="download-btn" id="dlBtn" onclick="downloadAll()" disabled>
       Download All Comments as Word Document
     </button>
+    <button onclick="clearSavedList()"
+            style="width:100%; margin-top:10px; padding:11px; background:none;
+                   border:1.5px solid var(--border); border-radius:10px;
+                   font-family:inherit; font-size:0.9rem; font-weight:700;
+                   color:var(--muted); cursor:pointer;">
+      Clear List &amp; Start Over
+    </button>
   </div>
 
   <!-- ── Preview of last-added student ─────────────────────────────────── -->
@@ -903,6 +910,36 @@ function goBack() {
 }
 
 // ── Student queue state ───────────────────────────────────────────────────
+// ── Persistence ───────────────────────────────────────────────────────────
+function saveState() {
+  localStorage.setItem('mv_queue',  JSON.stringify(studentQueue));
+  localStorage.setItem('mv_season', val('globalSeason'));
+  localStorage.setItem('mv_year',   val('globalYear'));
+}
+
+function loadState() {
+  const saved = localStorage.getItem('mv_queue');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) studentQueue.push(...parsed);
+    } catch(e) {}
+  }
+  const season = localStorage.getItem('mv_season');
+  const year   = localStorage.getItem('mv_year');
+  if (season) document.getElementById('globalSeason').value = season;
+  if (year)   document.getElementById('globalYear').value   = year;
+}
+
+function clearSavedList() {
+  if (!confirm('This will remove all students from the list. Are you sure?')) return;
+  studentQueue.length = 0;
+  localStorage.removeItem('mv_queue');
+  renderQueue();
+  document.getElementById('previewCard').style.display    = 'none';
+  document.getElementById('successBanner').style.display  = 'none';
+}
+
 const studentQueue = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -1036,6 +1073,7 @@ function addStudent() {
   if (!s) return;
 
   studentQueue.push(s);
+  saveState();
   renderQueue();
 
   // Show preview
@@ -1084,6 +1122,7 @@ function renderQueue() {
 
 function removeStudent(i) {
   studentQueue.splice(i, 1);
+  saveState();
   renderQueue();
   if (studentQueue.length === 0) {
     document.getElementById('previewCard').style.display = 'none';
@@ -1224,6 +1263,19 @@ function downloadAll() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ── On load: restore saved state ──────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  if (studentQueue.length) {
+    renderQueue();
+    const last = studentQueue[studentQueue.length - 1];
+    document.getElementById('successBanner').textContent =
+      `Welcome back! You have ${studentQueue.length} student${studentQueue.length > 1 ? 's' : ''} saved. Keep going or download when ready.`;
+    document.getElementById('successBanner').style.display = 'block';
+  }
+  syncSeasonGoalDefault();
+});
 </script>
 </body>
 </html>
