@@ -329,6 +329,14 @@
     <button class="add-entry-btn" onclick="addScheduleEntry()">+ Add Entry</button>
   </div>
 
+  <!-- ── Friendly Reminders ─────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Friendly Reminders</div>
+    <div class="card-subtitle">These appear in a highlighted box at the end of the letter. Edit or add your own.</div>
+    <div id="reminderEntries"></div>
+    <button class="add-entry-btn" onclick="addReminderEntry()">+ Add Reminder</button>
+  </div>
+
   <!-- ── Download ───────────────────────────────────────────────────────── -->
   <button class="download-btn" onclick="downloadOpenHouse()">
     Download Open House Letter (.docx)
@@ -384,9 +392,35 @@ function getScheduleEntries() {
   })).filter(e => e.activity);
 }
 
+// ── Reminder entries ──────────────────────────────────────────────────────
+const DEFAULT_REMINDERS = [
+  'Keep a change of clothes for each child in case of soiled clothes, and be sure to send new ones the next day if dirty ones go home!',
+  'As the weather gets colder, please label all jackets, hats, and gloves. No scarves, please!',
+  'Please join our private Bright Beginnings page on Facebook! I post pictures regularly so you can see what we are all doing in class!',
+  "If you haven't already, please send in a family picture. I keep these hung up in our classroom so the children can see them.",
+];
+
+function addReminderEntry(text) {
+  const container = document.getElementById('reminderEntries');
+  const row = document.createElement('div');
+  row.className = 'schedule-entry';
+  row.innerHTML = `
+    <input type="text" placeholder="Enter a reminder..." value="${text ? text.replace(/"/g, '&quot;') : ''}" style="flex:1"/>
+    <button class="remove-entry-btn" onclick="this.closest('.schedule-entry').remove()" title="Remove">&times;</button>
+  `;
+  container.appendChild(row);
+  if (!text) row.querySelector('input').focus();
+}
+
+function getReminderEntries() {
+  return [...document.querySelectorAll('#reminderEntries .schedule-entry input')]
+    .map(i => i.value.trim()).filter(Boolean);
+}
+
 // Pre-fill on load
 window.addEventListener('DOMContentLoaded', () => {
   DEFAULT_SCHEDULE.forEach(e => addScheduleEntry(e.time, e.activity));
+  DEFAULT_REMINDERS.forEach(r => addReminderEntry(r));
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -406,6 +440,7 @@ async function downloadOpenHouse() {
   const {
     Document, Packer, Paragraph, TextRun,
     AlignmentType, WidthType, BorderStyle,
+    Table, TableRow, TableCell, ShadingType, VerticalAlign,
   } = docx;
 
   const classroom  = v('classroomName') || 'Bright Starters Classroom';
@@ -475,6 +510,59 @@ async function downloadOpenHouse() {
     });
   }
 
+  function remindersBox(items) {
+    // Content width at 0.75" margins: 12240 - 2*1080 = 10080 DXA
+    const W = 10080;
+    const purple = '4a3a8a';
+    const cellBorder = (topSz) => ({
+      top:    { style: BorderStyle.SINGLE, size: topSz, color: purple },
+      bottom: { style: BorderStyle.SINGLE, size: 20,    color: purple },
+      left:   { style: BorderStyle.SINGLE, size: 20,    color: purple },
+      right:  { style: BorderStyle.SINGLE, size: 20,    color: purple },
+    });
+    const noTableBorder = {
+      top: { style: BorderStyle.NONE, size: 0 }, bottom: { style: BorderStyle.NONE, size: 0 },
+      left: { style: BorderStyle.NONE, size: 0 }, right: { style: BorderStyle.NONE, size: 0 },
+      insideH: { style: BorderStyle.NONE, size: 0 }, insideV: { style: BorderStyle.NONE, size: 0 },
+    };
+    return new Table({
+      columnWidths: [W],
+      width: { size: W, type: WidthType.DXA },
+      borders: noTableBorder,
+      rows: [
+        // Header row — solid purple background
+        new TableRow({ children: [new TableCell({
+          width: { size: W, type: WidthType.DXA },
+          borders: cellBorder(20),
+          shading: { type: ShadingType.CLEAR, color: 'auto', fill: purple },
+          children: [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 80, after: 80 },
+            children: [new TextRun({
+              text: 'FRIENDLY REMINDERS',
+              font: 'Century Gothic', bold: true, size: 24, color: 'FFFFFF',
+              characterSpacing: 25,
+            })],
+          })],
+        })]},),
+        // Body row — light purple background with bullet items
+        new TableRow({ children: [new TableCell({
+          width: { size: W, type: WidthType.DXA },
+          borders: cellBorder(12),
+          shading: { type: ShadingType.CLEAR, color: 'auto', fill: 'ede8f8' },
+          children: items.map((text, idx) => new Paragraph({
+            spacing: { before: idx === 0 ? 60 : 0, after: idx === items.length - 1 ? 60 : 60 },
+            indent: { left: 280 },
+            children: [
+              new TextRun({ text: '\u2022  ', font: 'Calibri', size: 24, bold: true, color: purple }),
+              new TextRun({ text, font: 'Calibri', size: 24, color: '222222' }),
+            ],
+          })),
+        })]},),
+      ],
+    });
+  }
+
   // ── Build document children ────────────────────────────────────────────
   const children = [
     // Title — smaller header
@@ -516,12 +604,8 @@ async function downloadOpenHouse() {
     // Philosophy blurb
     body("All in all, toddlers absolutely learn best through play! Not only do they learn problem solving and patience through playing with friends, but they also learn immensely through our activities and art! We encourage our students to focus on the process of their activities & artwork, not the outcome. We encourage them to have fun with the activities and not worry about what the end result looks like — this allows each child's individual creativity to blossom!"),
 
-    // Friendly Reminders
-    sectionHeading('Friendly Reminders'),
-    bullet('Keep a change of clothes for each child in case of soiled clothes, and be sure to send new ones the next day if dirty ones go home!'),
-    bullet('As the weather gets colder, please label all jackets, hats, and gloves. No scarves, please!'),
-    bullet('Please join our private Bright Beginnings page on Facebook! I post pictures regularly so you can see what we are all doing in class!'),
-    bullet("If you haven't already, please send in a family picture. I keep these hung up in our classroom so the children can see them."),
+    // Friendly Reminders — styled box
+    remindersBox(getReminderEntries()),
 
     // Closing
     body("Thank you again for sharing your children with me every day! They are a great group and are so much fun! If you have any questions, please do not hesitate to reach out to me."),
