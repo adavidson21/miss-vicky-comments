@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Open House Letter — Miss Vicky</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+  <style>
+    :root {
+      --purple:      #7c5cbf;
+      --purple-dark: #5a3d9a;
+      --purple-light:#ede8f8;
+      --amber:       #e8963a;
+      --amber-light: #fef6e8;
+      --cream:       #f7f4fc;
+      --white:       #ffffff;
+      --text:        #222222;
+      --muted:       #666666;
+      --border:      #ddd4ef;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 17px;
+    }
+
+    .site-header {
+      background: var(--purple-dark);
+      color: white;
+      padding: 24px 20px 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .site-header a.back {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.8);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .site-header h1 { font-size: 1.5rem; font-weight: 800; }
+    .site-header p  { margin-top: 6px; font-size: 0.95rem; opacity: 0.85; }
+
+    .main {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--purple-dark);
+      margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .field { margin-bottom: 18px; }
+
+    .field label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .field .hint {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 5px;
+      font-style: italic;
+    }
+
+    .field input[type=text],
+    .field input[type=number],
+    .field textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fafaf8;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .field input:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--purple);
+      background: white;
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 220px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .field-row { display: flex; gap: 14px; }
+    .field-row .field { flex: 1; }
+
+    .assistants-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 480px) {
+      .field-row { flex-direction: column; gap: 0; }
+      .assistants-grid { grid-template-columns: 1fr; }
+      .card { padding: 22px 18px; }
+    }
+
+    .download-btn {
+      width: 100%;
+      padding: 18px;
+      background: var(--purple-dark);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.01em;
+    }
+
+    .download-btn:hover { background: #422d75; }
+  </style>
+</head>
+<body>
+
+<div class="site-header">
+  <a href="index.html" class="back">&#8592; Home</a>
+  <h1>Open House Letter</h1>
+  <p>Customize and download the welcome letter for families.</p>
+</div>
+
+<div class="main">
+
+  <!-- ── Basic Info ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Classroom Info</div>
+    <div class="card-subtitle">These go on the header of the letter.</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="classroomName">Classroom Name</label>
+        <input type="text" id="classroomName" value="Bright Starters Classroom"/>
+      </div>
+      <div class="field">
+        <label for="schoolYear">School Year</label>
+        <input type="text" id="schoolYear" value="2025–2026"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Teachers ───────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Teachers</div>
+    <div class="card-subtitle">These appear in the opening and the sign-off at the bottom.</div>
+
+    <div class="field">
+      <label for="leadTeacher">Lead Teacher</label>
+      <input type="text" id="leadTeacher" value="Miss Vicky"/>
+    </div>
+
+    <div class="field">
+      <label>Assistant Teachers <span style="font-weight:400;color:var(--muted)">(leave blank to skip)</span></label>
+      <div class="assistants-grid">
+        <input type="text" id="asst1" placeholder="e.g. Miss Catherine"/>
+        <input type="text" id="asst2" placeholder="e.g. Miss Gabby"/>
+        <input type="text" id="asst3" placeholder="Assistant 3"/>
+        <input type="text" id="asst4" placeholder="Assistant 4"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Daily Schedule ─────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Daily Schedule</div>
+    <div class="card-subtitle">Edit as needed — one entry per line.</div>
+
+    <div class="field">
+      <textarea id="schedule">9:00am - Free play/centers
+9:45am - Circle Time
+10:00am - Snack Time, Diapers/Potty
+10:25am - Outside Time/Gross Motor
+11:05am - Wash Hands, Diapers/Potty
+11:30am - Lunch &amp; Reading
+11:45am - Dismissal for Half Day Kids
+12:00pm - Diapers/Potty
+12:25pm - Nap Time
+2:10pm - Wake Up
+2:15pm - Diapers/Potty
+2:20pm - Snack Time &amp; Reading
+3:00pm - Dismissal</textarea>
+      <span class="hint">Format: "9:00am - Activity"</span>
+    </div>
+  </div>
+
+  <!-- ── Download ───────────────────────────────────────────────────────── -->
+  <button class="download-btn" onclick="downloadOpenHouse()">
+    Download Open House Letter (.docx)
+  </button>
+
+</div>
+
+<script>
+function v(id) { return document.getElementById(id).value.trim(); }
+
+function buildTeacherNames() {
+  const lead   = v('leadTeacher') || 'Miss Vicky';
+  const asstIds = ['asst1','asst2','asst3','asst4'];
+  const assts  = asstIds.map(id => v(id)).filter(Boolean);
+  const all    = [lead, ...assts];
+  if (all.length === 1) return all[0];
+  if (all.length === 2) return all[0] + ' and ' + all[1];
+  return all.slice(0, -1).join(', ') + ', and ' + all[all.length - 1];
+}
+
+async function downloadOpenHouse() {
+  const {
+    Document, Packer, Paragraph, TextRun,
+    AlignmentType, WidthType, BorderStyle,
+  } = docx;
+
+  const classroom  = v('classroomName') || 'Bright Starters Classroom';
+  const year       = v('schoolYear')    || '2025–2026';
+  const lead       = v('leadTeacher')   || 'Miss Vicky';
+  const teachers   = buildTeacherNames();
+
+  const scheduleLines = document.getElementById('schedule').value
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  // ── docx helpers ──────────────────────────────────────────────────────
+  const MARGIN = 1440; // 1"
+
+  function heading(text, size, centered) {
+    return new Paragraph({
+      alignment: centered ? AlignmentType.CENTER : AlignmentType.LEFT,
+      spacing: { before: 0, after: 120 },
+      children: [new TextRun({
+        text,
+        font: 'Century Gothic',
+        bold: true,
+        size,          // half-points
+        color: '4a3a8a',
+      })],
+    });
+  }
+
+  function sectionHeading(text) {
+    return new Paragraph({
+      spacing: { before: 200, after: 80 },
+      children: [new TextRun({
+        text,
+        font: 'Century Gothic',
+        bold: true,
+        size: 24,      // 12pt
+        color: '222222',
+      })],
+    });
+  }
+
+  function body(text, spacingBefore) {
+    return new Paragraph({
+      spacing: { before: spacingBefore || 0, after: 140 },
+      children: [new TextRun({ text, font: 'Calibri', size: 24, color: '222222' })],
+    });
+  }
+
+  function bullet(text) {
+    return new Paragraph({
+      spacing: { before: 0, after: 100 },
+      indent: { left: 360 },
+      children: [
+        new TextRun({ text: '\u2022  ', font: 'Calibri', size: 24, color: '4a3a8a', bold: true }),
+        new TextRun({ text, font: 'Calibri', size: 24, color: '222222' }),
+      ],
+    });
+  }
+
+  function scheduleRow(line) {
+    const dashIdx = line.indexOf(' - ');
+    const time    = dashIdx > -1 ? line.slice(0, dashIdx).trim() : '';
+    const activity = dashIdx > -1 ? line.slice(dashIdx + 3).trim() : line;
+    return new Paragraph({
+      spacing: { before: 0, after: 80 },
+      indent: { left: 360 },
+      children: [
+        new TextRun({ text: time + (time ? '  —  ' : ''), font: 'Calibri', size: 24, bold: true, color: '4a3a8a' }),
+        new TextRun({ text: activity, font: 'Calibri', size: 24, color: '222222' }),
+      ],
+    });
+  }
+
+  function spacer() {
+    return new Paragraph({ spacing: { before: 0, after: 120 } });
+  }
+
+  // ── Build document children ────────────────────────────────────────────
+  const children = [
+    // Title
+    heading(`Miss Vicky's ${classroom}`, 56, true),
+    heading(`Welcome to our classroom!`, 28, true),
+    spacer(),
+
+    // Intro
+    body(`Hi everyone, I'm ${lead}! Let me start by saying that it has been a pleasure getting to know your children! I'm really excited for the year ahead! Our #1 goal is to provide a happy, comforting, and loving atmosphere for the children and to build their trust! We always assure the children that mom and dad come back, as for some children this is their first time in school. And, we provide a consistent routine so the children come to know what to expect each day.`),
+    spacer(),
+
+    // Schedule
+    sectionHeading('Our daily routine in our classroom is the following:'),
+    ...scheduleLines.map(scheduleRow),
+    spacer(),
+
+    // Skills intro
+    body('Throughout this school year, we are going to be working towards developing the following skills:'),
+    spacer(),
+
+    // Social & Emotional
+    sectionHeading('Social and Emotional Skills'),
+    bullet('Washing hands before they eat, sitting together for snack-time, and how to clean up after themselves.'),
+    bullet('Sitting for circle time — enjoying books, songs, games & participating, along with taking turns.'),
+    bullet('Lining up and walking in the hallways on the way outside safely, using the buddy rope, and using their listening ears, following rules and using inside/outside voices.'),
+    bullet('And most importantly, learn how to be a good friend by sharing and working to redirect some normal but undesired toddler behavior like hitting, pushing, biting, and pinching. We encourage them to "use their words" instead!'),
+    spacer(),
+
+    // Fine Motor
+    sectionHeading('Fine Motor Skills'),
+    bullet('Using crayons and markers, working with glue, and painting using different mediums (finger painting, brush, sponges, corks/stamps).'),
+    bullet('Sensory Based Activities like play dough, sand, water play, scooping and pouring — anything that encourages children to learn to grasp and hold different things.'),
+    spacer(),
+
+    // Gross Motor
+    sectionHeading('Gross Motor Skills'),
+    bullet('Navigating playground equipment, climbing, catching/kicking a ball, and of course, lots of dancing!'),
+    spacer(),
+
+    // Pre-Academic
+    sectionHeading('Pre-Academic Skills'),
+    bullet('Learning colors and shapes through play (color sorting and matching).'),
+    bullet('Singing songs, reading books, using rhythm sticks & shakers.'),
+    bullet("Learning their ABC's by having activities based on the letter of the week, and having children bring in items that start with that letter to share at circle time!"),
+    spacer(),
+
+    // Philosophy blurb
+    body("All in all, toddlers absolutely learn best through play! Not only do they learn problem solving and patience through playing with friends, but they also learn immensely through our activities and art! We encourage our students to focus on the process of their activities & artwork, not the outcome. We encourage them to have fun with the activities and not worry about what the end result looks like — this allows each child's individual creativity to blossom!"),
+    spacer(),
+
+    // Friendly Reminders
+    sectionHeading('Friendly Reminders'),
+    bullet('Keep a change of clothes for each child in case of soiled clothes, and be sure to send new ones the next day if dirty ones go home!'),
+    bullet('As the weather gets colder, please label all jackets, hats, and gloves. No scarves, please!'),
+    bullet('Please join our private Bright Beginnings page on Facebook! I post pictures regularly so you can see what we are all doing in class!'),
+    bullet("If you haven't already, please send in a family picture. I keep these hung up in our classroom so the children can see them."),
+    spacer(),
+
+    // Closing
+    body("Thank you again for sharing your children with me every day! They are a great group and are so much fun! If you have any questions, please do not hesitate to reach out to me."),
+    spacer(),
+    body('Thank You! \u263a'),
+    new Paragraph({
+      spacing: { before: 80, after: 0 },
+      children: [new TextRun({
+        text: teachers,
+        font: 'Calibri',
+        size: 24,
+        bold: true,
+        color: '4a3a8a',
+      })],
+    }),
+  ];
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: { margin: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN } },
+      },
+      children,
+    }],
+  });
+
+  const blob     = await Packer.toBlob(doc);
+  const filename = `OpenHouse_${year.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+  const url      = URL.createObjectURL(blob);
+  const a        = document.createElement('a');
+  a.href         = url;
+  a.download     = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>

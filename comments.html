@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Miss Vicky's Comment Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+  <style>
+    :root {
+      --green:       #7c5cbf;
+      --green-dark:  #5a3d9a;
+      --green-light: #ede8f8;
+      --amber:       #e8963a;
+      --amber-light: #fef6e8;
+      --cream:       #f7f4fc;
+      --white:       #ffffff;
+      --text:        #222222;
+      --muted:       #666666;
+      --border:      #ddd4ef;
+      --red:         #c0392b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 17px;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    .site-header {
+      background: var(--green-dark);
+      color: white;
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+
+    .site-header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .site-header p {
+      margin-top: 6px;
+      font-size: 0.95rem;
+      opacity: 0.85;
+    }
+
+    /* ── Season picker (header) ───────────────────────────────── */
+    .season-bar {
+      background: var(--green);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .season-bar label {
+      color: white;
+      font-weight: 700;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+
+    .season-bar select,
+    .season-bar input[type=number] {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--green-dark);
+      background: white;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .season-bar select { padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a3d9a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+
+    .season-bar input[type=number] { width: 80px; text-align: center; }
+
+    /* ── Main layout ──────────────────────────────────────────── */
+    .main {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 24px 16px 140px; /* bottom padding for sticky nav */
+    }
+
+    /* ── Progress stepper ─────────────────────────────────────── */
+    .stepper {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 28px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 44px;
+      position: relative;
+    }
+
+    .step-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      right: -50%;
+      height: 2px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .step-item.done:not(:last-child)::after,
+    .step-item.active:not(:last-child)::after {
+      background: var(--green);
+    }
+
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      position: relative;
+      z-index: 1;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .step-item.done .step-circle {
+      background: var(--green);
+      color: white;
+    }
+
+    .step-item.active .step-circle {
+      background: var(--amber);
+      color: white;
+      box-shadow: 0 0 0 4px var(--amber-light);
+    }
+
+    .step-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-top: 5px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      line-height: 1.2;
+      max-width: 56px;
+    }
+
+    .step-item.active .step-label { color: var(--amber); }
+    .step-item.done .step-label   { color: var(--green); }
+
+    /* ── Step counter text ────────────────────────────────────── */
+    .step-counter {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--green-dark);
+      margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    /* ── Field ────────────────────────────────────────────────── */
+    .field {
+      margin-bottom: 20px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .field .hint {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 5px;
+      font-style: italic;
+    }
+
+    .field input[type=text],
+    .field input[type=number],
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fafaf8;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 38px;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--green);
+      background: white;
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+
+    /* Two-column row on wider screens */
+    .field-row {
+      display: flex;
+      gap: 14px;
+    }
+
+    .field-row .field { flex: 1; }
+
+    /* ── Pill checkboxes ──────────────────────────────────────── */
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill-group input[type=checkbox] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .pill-group label {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 18px;
+      background: var(--cream);
+      border: 2px solid var(--border);
+      border-radius: 50px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      margin: 0;
+    }
+
+    .pill-group label:hover {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-light);
+    }
+
+    .pill-group input[type=checkbox]:checked + label {
+      background: var(--green-light);
+      border-color: var(--green);
+      color: var(--green-dark);
+    }
+
+    /* ── Sticky nav bar ───────────────────────────────────────── */
+    .sticky-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 2px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      gap: 12px;
+      max-width: 620px;
+      margin: 0 auto;
+      z-index: 100;
+    }
+
+    /* The sticky nav needs to be centered on desktop */
+    @media (min-width: 620px) {
+      .sticky-nav {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 620px;
+        border-left: 2px solid var(--border);
+        border-right: 2px solid var(--border);
+      }
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 16px 10px;
+      border-radius: 12px;
+      border: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .nav-btn-back {
+      background: var(--cream);
+      color: var(--muted);
+      border: 2px solid var(--border);
+      flex: 0 0 auto;
+      width: 80px;
+    }
+
+    .nav-btn-back:disabled { opacity: 0.35; cursor: default; }
+
+    .nav-btn-next {
+      background: var(--green);
+      color: white;
+    }
+
+    .nav-btn-next:hover { background: var(--green-dark); }
+
+    .nav-btn-add {
+      background: var(--amber);
+      color: white;
+    }
+
+    .nav-btn-add:hover { background: #d4832e; }
+
+    /* ── Queue section ────────────────────────────────────────── */
+    .queue-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .queue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .queue-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--green-dark);
+    }
+
+    .queue-badge {
+      background: var(--green);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 800;
+      border-radius: 50px;
+      padding: 3px 12px;
+    }
+
+    .queue-list { list-style: none; }
+
+    .queue-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--green-light);
+      border: 1.5px solid #b8dfc8;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    .queue-item-name {
+      font-weight: 800;
+      color: var(--green-dark);
+      font-size: 1rem;
+    }
+
+    .queue-item-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .remove-btn {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 7px 14px;
+      font-family: inherit;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .remove-btn:hover { border-color: var(--red); color: var(--red); }
+
+    .download-btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 18px;
+      background: var(--green-dark);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.01em;
+    }
+
+    .download-btn:hover { background: #163f28; }
+    .download-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    /* ── Banner ───────────────────────────────────────────────── */
+    .banner {
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      line-height: 1.5;
+      display: none;
+    }
+
+    .banner-success {
+      background: var(--green-light);
+      border: 1.5px solid #a0cfb5;
+      color: var(--green-dark);
+    }
+
+    /* ── Preview ──────────────────────────────────────────────── */
+    .preview-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .preview-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--green-dark);
+      margin-bottom: 14px;
+    }
+
+    .preview-body {
+      background: var(--cream);
+      border-radius: 10px;
+      padding: 18px;
+      font-size: 0.9rem;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+
+    /* ── Responsive tweaks ────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .field-row { flex-direction: column; gap: 0; }
+      .card { padding: 22px 18px; }
+      .site-header h1 { font-size: 1.3rem; }
+      .step-label { font-size: 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<div class="site-header" style="position:relative;">
+  <a href="index.html" style="position:absolute;left:18px;top:50%;transform:translateY(-50%);
+     color:rgba(255,255,255,0.8);font-size:0.85rem;font-weight:700;text-decoration:none;">
+    &#8592; Home
+  </a>
+  <h1>Miss Vicky's Comment Generator</h1>
+  <p>Fill in the steps for each student, then download one Word document for the whole class.</p>
+</div>
+<div class="season-bar">
+  <label for="globalSeason">Semester:</label>
+  <select id="globalSeason">
+    <option value="Fall">Fall</option>
+    <option value="Spring">Spring</option>
+  </select>
+  <label for="globalYear">Year:</label>
+  <input type="number" id="globalYear" value="2025" min="2020" max="2040"/>
+</div>
+
+<div class="main">
+
+  <!-- ── Success banner ─────────────────────────────────────────────────── -->
+  <div class="banner banner-success" id="successBanner"></div>
+
+  <!-- ── Stepper ────────────────────────────────────────────────────────── -->
+  <div class="stepper" id="stepper">
+    <div class="step-item active" data-step="1">
+      <div class="step-circle">1</div>
+      <div class="step-label">Student Info</div>
+    </div>
+    <div class="step-item" data-step="2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Opening</div>
+    </div>
+    <div class="step-item" data-step="3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Social</div>
+    </div>
+    <div class="step-item" data-step="4">
+      <div class="step-circle">4</div>
+      <div class="step-label">Motor</div>
+    </div>
+    <div class="step-item" data-step="5">
+      <div class="step-circle">5</div>
+      <div class="step-label">Language</div>
+    </div>
+    <div class="step-item" data-step="6">
+      <div class="step-circle">6</div>
+      <div class="step-label">Goals</div>
+    </div>
+  </div>
+
+  <div class="step-counter" id="stepCounter">Step 1 of 6</div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 1 — Student Info
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step1">
+    <div class="card-title">Student Information</div>
+    <div class="card-subtitle">Start by entering the student's basic details.</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="firstName">First Name</label>
+        <input type="text" id="firstName" placeholder="e.g. Maeve" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label for="lastName">Last Name</label>
+        <input type="text" id="lastName" placeholder="e.g. Budd" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="pronoun">Pronouns</label>
+      <select id="pronoun">
+        <option value="she">She / Her</option>
+        <option value="he">He / Him</option>
+        <option value="they">They / Them</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 2 — Opening / Overall Impression
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step2" style="display:none">
+    <div class="card-title">Overall Impression</div>
+    <div class="card-subtitle">How would you describe this student in a few words? This shapes the opening paragraph.</div>
+
+    <div class="field">
+      <label>Personality (pick up to 2)</label>
+      <div class="pill-group" id="personality-checks">
+        <input type="checkbox" id="p1" value="happy"><label for="p1">Happy</label>
+        <input type="checkbox" id="p2" value="sweet"><label for="p2">Sweet</label>
+        <input type="checkbox" id="p3" value="kind"><label for="p3">Kind</label>
+        <input type="checkbox" id="p4" value="bright"><label for="p4">Bright</label>
+        <input type="checkbox" id="p5" value="energetic"><label for="p5">Energetic</label>
+        <input type="checkbox" id="p6" value="curious"><label for="p6">Curious</label>
+        <input type="checkbox" id="p7" value="nurturing"><label for="p7">Nurturing</label>
+        <input type="checkbox" id="p8" value="shy at first"><label for="p8">Shy at first</label>
+        <input type="checkbox" id="p9" value="outgoing"><label for="p9">Outgoing</label>
+        <input type="checkbox" id="p10" value="creative"><label for="p10">Creative</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="adjustment">How has this student adjusted to the classroom?</label>
+      <select id="adjustment">
+        <option value="adapted well to our classroom routines">Adapted well — new to the class</option>
+        <option value="grown so much since the beginning of the year">Grown a lot since September</option>
+        <option value="been an absolute joy to have in class all year">Had a wonderful year overall</option>
+        <option value="made great strides throughout the year">Made great strides this year</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="socialOpener">How does this student do with friends?</label>
+      <select id="socialOpener">
+        <option value="has made many friends and plays well with them">Made many friends, plays well</option>
+        <option value="has bonded with her classmates and enjoys playing with them">Bonded well with classmates</option>
+        <option value="is beginning to warm up to her friends">Still warming up to friends</option>
+        <option value="is great about sharing and plays well with her friends">Great at sharing, plays well</option>
+        <option value="has made great strides in how she communicates with friends during free play">Improved communication during free play</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="favActivity">What does this student love most? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <input type="text" id="favActivity" placeholder="e.g. playing with the babies and cooking in the kitchen"/>
+      <span class="hint">Used in the opening sentence of the comment.</span>
+    </div>
+
+    <div class="field">
+      <label for="openingExtra">Anything else to add to the opening? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="openingExtra" placeholder="Any extra details you'd like in the first paragraph..."></textarea>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 3 — Social & Emotional
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step3" style="display:none">
+    <div class="card-title">Social &amp; Emotional Skills</div>
+    <div class="card-subtitle">What does this student enjoy playing, and how do they interact with others?</div>
+
+    <div class="field">
+      <label>What does this student love to play? (check all that apply)</label>
+      <div class="pill-group" id="play-checks">
+        <input type="checkbox" id="pl1" value="art projects"><label for="pl1">Art projects</label>
+        <input type="checkbox" id="pl2" value="sensory bins"><label for="pl2">Sensory bins</label>
+        <input type="checkbox" id="pl3" value="playing with babies/dolls"><label for="pl3">Babies / dolls</label>
+        <input type="checkbox" id="pl4" value="the kitchen/dramatic play"><label for="pl4">Kitchen / dramatic play</label>
+        <input type="checkbox" id="pl5" value="books"><label for="pl5">Books</label>
+        <input type="checkbox" id="pl6" value="cars and trucks"><label for="pl6">Cars &amp; trucks</label>
+        <input type="checkbox" id="pl7" value="Legos/blocks"><label for="pl7">Legos / blocks</label>
+        <input type="checkbox" id="pl8" value="puzzles"><label for="pl8">Puzzles</label>
+        <input type="checkbox" id="pl9" value="imaginative play with friends"><label for="pl9">Imaginative play</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="socialChallenge">Is there a social challenge to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <select id="socialChallenge">
+        <option value="">No — nothing to flag</option>
+        <option value="sometimes gets frustrated when taking turns with friends">Gets frustrated with turn-taking</option>
+        <option value="is still warming up and can be quiet around new friends">Quiet / still warming up</option>
+        <option value="sometimes struggles to express herself when upset">Struggles to express emotions</option>
+        <option value="is working on sharing with her friends">Still working on sharing</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="socialExtra">Anything else to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="socialExtra" placeholder="Any extra details for this section..."></textarea>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 4 — Fine & Gross Motor
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step4" style="display:none">
+    <div class="card-title">Fine &amp; Gross Motor Skills</div>
+    <div class="card-subtitle">How does this student do with art, outdoor activities, and taking care of themselves?</div>
+
+    <div class="field">
+      <label for="artLevel">How is this student with art?</label>
+      <select id="artLevel">
+        <option value="loves working on art projects and takes great care with her work">Loves art — very careful and detail-oriented</option>
+        <option value="enjoys working on her art projects using all different mediums">Enjoys art — likes using different materials</option>
+        <option value="has really blossomed as an artist and takes her time with projects">Has really blossomed as an artist this year</option>
+        <option value="enjoys art but is still building her confidence with projects">Enjoys art — still building confidence</option>
+        <option value="">Skip — not notable</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>What does this student enjoy outside? (check all that apply)</label>
+      <div class="pill-group" id="outdoor-checks">
+        <input type="checkbox" id="o1" value="running and climbing"><label for="o1">Running &amp; climbing</label>
+        <input type="checkbox" id="o2" value="digging in the dirt"><label for="o2">Digging in dirt</label>
+        <input type="checkbox" id="o3" value="playing soccer"><label for="o3">Soccer</label>
+        <input type="checkbox" id="o4" value="playing tag"><label for="o4">Tag</label>
+        <input type="checkbox" id="o5" value="riding bikes"><label for="o5">Bikes</label>
+        <input type="checkbox" id="o6" value="playing on the playground"><label for="o6">Playground</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Independence skills this student has (check all that apply)</label>
+      <div class="pill-group" id="independence-checks">
+        <input type="checkbox" id="i1" value="uses the bathroom independently"><label for="i1">Bathroom independence</label>
+        <input type="checkbox" id="i2" value="puts on and takes off her jacket independently"><label for="i2">Jacket on/off</label>
+        <input type="checkbox" id="i3" value="cleans up after snack time"><label for="i3">Cleans up after snack</label>
+        <input type="checkbox" id="i4" value="walks well in line"><label for="i4">Walks in line</label>
+        <input type="checkbox" id="i5" value="is great about helping clean up the classroom"><label for="i5">Helps clean up classroom</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="motorExtra">Anything else to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="motorExtra" placeholder="Any extra details for this section..."></textarea>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 5 — Language & Communication
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step5" style="display:none">
+    <div class="card-title">Language &amp; Communication</div>
+    <div class="card-subtitle">How does this student communicate, participate, and show what they know?</div>
+
+    <div class="field">
+      <label for="circleTime">How is this student during circle time?</label>
+      <select id="circleTime">
+        <option value="loves participating in circle time and really enjoys singing and dancing with her friends">Loves it — always singing and dancing</option>
+        <option value="is always engaged during circle time and loves singing and dancing">Always engaged and loves singing</option>
+        <option value="is beginning to participate more during circle time">Beginning to participate more</option>
+        <option value="enjoys circle time and follows along well">Enjoys it and follows along well</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="langDev">How is this student's language developing?</label>
+      <select id="langDev">
+        <option value="expresses her wants and needs well with her friends and teachers">Expresses wants and needs well</option>
+        <option value="has shown great improvement in expressing her wants and needs">Has improved a lot in expressing needs</option>
+        <option value="is working on using her words to express her wants and needs">Still working on using words more</option>
+        <option value="has developed her language immensely and loves to tell stories">Language has developed immensely — loves telling stories</option>
+        <option value="has been talking more in class and is growing more confident">Talking more and growing more confident</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>What does this student recognize? (check all that apply)</label>
+      <div class="pill-group" id="academic-checks">
+        <input type="checkbox" id="a1" value="recognizes her name"><label for="a1">Recognizes her name</label>
+        <input type="checkbox" id="a2" value="has a good handle on her colors"><label for="a2">Knows colors</label>
+        <input type="checkbox" id="a3" value="has a good handle on her shapes"><label for="a3">Knows shapes</label>
+        <input type="checkbox" id="a4" value="can count to 10"><label for="a4">Can count to 10</label>
+        <input type="checkbox" id="a5" value="loves reading books"><label for="a5">Loves books</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="langExtra">Anything else to note? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="langExtra" placeholder="Any extra details for this section..."></textarea>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       STEP 6 — Goals
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="step6" style="display:none">
+    <div class="card-title">Goals &amp; Closing</div>
+    <div class="card-subtitle">What should parents focus on, and how should the comment close out?</div>
+
+    <div class="field">
+      <label>Goals to mention to parents (check all that apply)</label>
+      <div class="pill-group" id="goals-checks">
+        <input type="checkbox" id="g1" value="fine motor skills (writing and scissors)"><label for="g1">Fine motor / scissors</label>
+        <input type="checkbox" id="g2" value="communication and independence"><label for="g2">Communication &amp; independence</label>
+        <input type="checkbox" id="g3" value="potty training"><label for="g3">Potty training</label>
+        <input type="checkbox" id="g4" value="using words to express wants and needs"><label for="g4">Using words more</label>
+        <input type="checkbox" id="g5" value="opening up and building confidence in class"><label for="g5">Building confidence</label>
+        <input type="checkbox" id="g6" value="turn-taking with friends"><label for="g6">Turn-taking</label>
+        <input type="checkbox" id="g7" value="reading together at home"><label for="g7">Reading at home</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="goalsExtra">Anything else to add? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <textarea id="goalsExtra" placeholder="Any other goals or closing thoughts..."></textarea>
+    </div>
+  </div>
+
+  <!-- ── Queue ───────────────────────────────────────────────────────────── -->
+  <div class="queue-card" id="queueCard">
+    <div class="queue-header">
+      <div class="queue-title">Students Ready</div>
+      <div class="queue-badge" id="queueCount">0</div>
+    </div>
+    <ul class="queue-list" id="queueList"></ul>
+    <button class="download-btn" id="dlBtn" onclick="downloadAll()" disabled>
+      Download All Comments as Word Document
+    </button>
+    <button onclick="clearSavedList()"
+            style="width:100%; margin-top:10px; padding:11px; background:none;
+                   border:1.5px solid var(--border); border-radius:10px;
+                   font-family:inherit; font-size:0.9rem; font-weight:700;
+                   color:var(--muted); cursor:pointer;">
+      Clear List &amp; Start Over
+    </button>
+  </div>
+
+  <!-- ── Preview of last-added student ─────────────────────────────────── -->
+  <div class="preview-card" id="previewCard">
+    <div class="preview-title">Preview — Last Added</div>
+    <div class="preview-body" id="previewBody"></div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ── Sticky nav ────────────────────────────────────────────────────────── -->
+<div class="sticky-nav">
+  <button class="nav-btn nav-btn-back" id="btnBack" onclick="goBack()" disabled>Back</button>
+  <button class="nav-btn nav-btn-next" id="btnNext" onclick="goNext()">Next &rarr;</button>
+</div>
+
+<script>
+// ── Wizard state ──────────────────────────────────────────────────────────
+let currentStep = 1;
+const TOTAL_STEPS = 6;
+
+function showStep(n) {
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    document.getElementById(`step${i}`).style.display = (i === n) ? 'block' : 'none';
+  }
+
+  // Update stepper dots
+  document.querySelectorAll('.step-item').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (s === n) el.classList.add('active');
+    else if (s < n) el.classList.add('done');
+  });
+
+  document.getElementById('stepCounter').textContent = `Step ${n} of ${TOTAL_STEPS}`;
+
+  // Update nav buttons
+  document.getElementById('btnBack').disabled = (n === 1);
+  const btnNext = document.getElementById('btnNext');
+  if (n === TOTAL_STEPS) {
+    btnNext.textContent = 'Add Student';
+    btnNext.className = 'nav-btn nav-btn-add';
+  } else {
+    btnNext.textContent = 'Next \u2192';
+    btnNext.className = 'nav-btn nav-btn-next';
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  currentStep = n;
+}
+
+function goNext() {
+  if (currentStep === 1) {
+    if (!val('firstName') || !val('lastName')) {
+      alert('Please enter the student\'s first and last name before continuing.');
+      return;
+    }
+  }
+  if (currentStep < TOTAL_STEPS) {
+    showStep(currentStep + 1);
+  } else {
+    addStudent();
+  }
+}
+
+function goBack() {
+  if (currentStep > 1) showStep(currentStep - 1);
+}
+
+// ── Student queue state ───────────────────────────────────────────────────
+// ── Persistence ───────────────────────────────────────────────────────────
+function saveState() {
+  localStorage.setItem('mv_queue',  JSON.stringify(studentQueue));
+  localStorage.setItem('mv_season', val('globalSeason'));
+  localStorage.setItem('mv_year',   val('globalYear'));
+}
+
+function loadState() {
+  const saved = localStorage.getItem('mv_queue');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) studentQueue.push(...parsed);
+    } catch(e) {}
+  }
+  const season = localStorage.getItem('mv_season');
+  const year   = localStorage.getItem('mv_year');
+  if (season) document.getElementById('globalSeason').value = season;
+  if (year)   document.getElementById('globalYear').value   = year;
+}
+
+function clearSavedList() {
+  if (!confirm('This will remove all students from the list. Are you sure?')) return;
+  studentQueue.length = 0;
+  localStorage.removeItem('mv_queue');
+  renderQueue();
+  document.getElementById('previewCard').style.display    = 'none';
+  document.getElementById('successBanner').style.display  = 'none';
+}
+
+const studentQueue = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function val(id) { return document.getElementById(id).value.trim(); }
+
+function checked(groupId) {
+  return [...document.querySelectorAll(`#${groupId} input[type=checkbox]:checked`)]
+    .map(cb => cb.value);
+}
+
+function joinList(arr) {
+  if (!arr.length) return '';
+  if (arr.length === 1) return arr[0];
+  if (arr.length === 2) return arr[0] + ' and ' + arr[1];
+  return arr.slice(0, -1).join(', ') + ', and ' + arr[arr.length - 1];
+}
+
+function pronouns(p) {
+  return {
+    Pro:  p === 'she' ? 'She'      : p === 'he' ? 'He'      : 'They',
+    pro:  p === 'she' ? 'she'      : p === 'he' ? 'he'      : 'they',
+    pos:  p === 'she' ? 'her'      : p === 'he' ? 'his'     : 'their',
+    Pos:  p === 'she' ? 'Her'      : p === 'he' ? 'His'     : 'Their',
+    refl: p === 'she' ? 'herself'  : p === 'he' ? 'himself' : 'themselves',
+    noun: p === 'she' ? 'girl'     : p === 'he' ? 'boy'     : 'child',
+  };
+}
+
+function fixP(text, pn) {
+  return text
+    .replace(/\bherself\b/g, pn.refl).replace(/\bhimself\b/g, pn.refl)
+    .replace(/\bHer\b/g, pn.Pos).replace(/\bHis\b/g, pn.Pos)
+    .replace(/\bher\b/g, pn.pos).replace(/\bhis\b/g, pn.pos)
+    .replace(/\bShe\b/g, pn.Pro).replace(/\bHe\b/g, pn.Pro)
+    .replace(/\bshe\b/g, pn.pro).replace(/\bhe\b/g, pn.pro)
+    .replace(/\bgirl\b/g, pn.noun).replace(/\bboy\b/g, pn.noun);
+}
+
+// ── Build comment from form ───────────────────────────────────────────────
+function buildStudent() {
+  const firstName = val('firstName');
+  const lastName  = val('lastName');
+  const season    = val('globalSeason');
+  const year      = val('globalYear');
+  const p         = val('pronoun');
+  const pn        = pronouns(p);
+
+  // Opening
+  const personalities  = checked('personality-checks');
+  const personalityStr = personalities.length ? personalities.slice(0, 2).join(', ') : 'wonderful';
+  const adjustment     = fixP(val('adjustment'), pn);
+  const socialOpener   = fixP(val('socialOpener'), pn);
+  const favActivity    = val('favActivity');
+  const openingExtra   = val('openingExtra');
+
+  let opening = `${firstName} is a ${personalityStr} ${pn.noun} who is a pleasure to have in class! `;
+  opening += `${pn.Pro} has ${adjustment}`;
+  opening += socialOpener ? ` and ${socialOpener}!` : '!';
+  if (favActivity) opening += ` ${pn.Pro} especially loves ${favActivity}!`;
+  if (openingExtra) opening += ` ${openingExtra}`;
+
+  // Social & Emotional
+  const playItems   = checked('play-checks').map(s => fixP(s, pn));
+  const socialChall = fixP(val('socialChallenge'), pn);
+  const socialExtra = val('socialExtra');
+
+  let social = '';
+  if (playItems.length) social += `${firstName} loves ${joinList(playItems)} during free play. `;
+  if (socialChall) social += `${pn.Pos} ${socialChall.replace(/^[A-Z]/, c => c.toLowerCase())}. `;
+  if (socialExtra) social += socialExtra;
+  if (!social) social = `${firstName} engages well with ${pn.pos} classmates and enjoys all of our classroom activities.`;
+
+  // Fine & Gross Motor
+  const outdoorActs = checked('outdoor-checks');
+  const artLevel    = fixP(val('artLevel'), pn);
+  const indepItems  = checked('independence-checks').map(s => fixP(s, pn));
+  const motorExtra  = val('motorExtra');
+
+  let motor = '';
+  if (artLevel) motor += `${firstName} ${artLevel}. `;
+  if (outdoorActs.length) motor += `${pn.Pro} also loves ${joinList(outdoorActs)} outside! `;
+  if (indepItems.length) motor += `${firstName} ${joinList(indepItems)}.`;
+  if (motorExtra) motor += ` ${motorExtra}`;
+  if (!motor) motor = `${firstName} is developing ${pn.pos} fine and gross motor skills well.`;
+
+  // Language & Communication
+  const circleTime    = fixP(val('circleTime'), pn);
+  const langDev       = fixP(val('langDev'), pn);
+  const academicItems = checked('academic-checks').map(s => fixP(s, pn));
+  const langExtra     = val('langExtra');
+
+  let lang = '';
+  if (circleTime) lang += `${firstName} ${circleTime}. `;
+  if (langDev) lang += `${pn.Pro} ${langDev}. `;
+  if (academicItems.length) lang += `${firstName} ${joinList(academicItems)}.`;
+  if (langExtra) lang += ` ${langExtra}`;
+  if (!lang) lang = `${firstName} is growing in ${pn.pos} language and communication skills.`;
+
+  // Goals
+  const seasonGoal = val('globalSeason') === 'Spring' ? 'summer' : 'continue';
+  const goalItems  = checked('goals-checks').map(s => fixP(s, pn));
+  const goalsExtra = val('goalsExtra');
+
+  let goals = '';
+  if (seasonGoal === 'summer') {
+    goals += goalItems.length
+      ? `Over the summer, please practice ${joinList(goalItems)} to be ready for preschool. `
+      : `Over the summer, please practice fine motor skills to be ready to write and use scissors in preschool. `;
+    goals += `Be sure to read together as well. Have a wonderful summer — we will miss having ${firstName} in class!`;
+  } else {
+    if (goalItems.length) goals += `Our goal for ${firstName} is to continue working on ${joinList(goalItems)}. `;
+    goals += `We appreciate your continued support at home!`;
+  }
+  if (goalsExtra) goals += ` ${goalsExtra}`;
+
+  return {
+    name:    `${firstName} ${lastName}`,
+    firstName,
+    heading: `Miss Vicky's Class Comments ${season} ${year}`,
+    opening: opening.trim(),
+    social:  social.trim(),
+    motor:   motor.trim(),
+    lang:    lang.trim(),
+    goals:   goals.trim(),
+  };
+}
+
+// ── Add student ───────────────────────────────────────────────────────────
+function addStudent() {
+  const s = buildStudent();
+  if (!s) return;
+
+  studentQueue.push(s);
+  saveState();
+  renderQueue();
+
+  // Show preview
+  const text = [
+    s.name + '      ' + s.heading, '',
+    s.opening, '',
+    'Social & Emotional Skills', s.social, '',
+    'Fine & Gross Motor Skills', s.motor, '',
+    'Language & Communication',  s.lang,  '',
+    'Goals', s.goals,
+  ].join('\n');
+  document.getElementById('previewBody').textContent = text;
+  document.getElementById('previewCard').style.display = 'block';
+
+  // Success banner
+  const banner = document.getElementById('successBanner');
+  banner.textContent = `${s.name} has been added! Fill in the next student, or tap Download All when you're done.`;
+  banner.style.display = 'block';
+
+  clearForm();
+  showStep(1);
+}
+
+function renderQueue() {
+  const list  = document.getElementById('queueList');
+  const card  = document.getElementById('queueCard');
+  const dlBtn = document.getElementById('dlBtn');
+
+  list.innerHTML = '';
+  studentQueue.forEach((s, i) => {
+    const li = document.createElement('li');
+    li.className = 'queue-item';
+    li.innerHTML = `
+      <div>
+        <div class="queue-item-name">${s.name}</div>
+        <div class="queue-item-sub">${s.heading}</div>
+      </div>
+      <button class="remove-btn" onclick="removeStudent(${i})">Remove</button>`;
+    list.appendChild(li);
+  });
+
+  document.getElementById('queueCount').textContent = studentQueue.length;
+  card.style.display = studentQueue.length ? 'block' : 'none';
+  dlBtn.disabled = studentQueue.length === 0;
+}
+
+function removeStudent(i) {
+  studentQueue.splice(i, 1);
+  saveState();
+  renderQueue();
+  if (studentQueue.length === 0) {
+    document.getElementById('previewCard').style.display = 'none';
+    document.getElementById('successBanner').style.display = 'none';
+  }
+}
+
+function clearForm() {
+  document.querySelectorAll('input[type=text]').forEach(el => el.value = '');
+  document.querySelectorAll('textarea').forEach(el => el.value = '');
+  document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  // Reset per-student selects only (not global season/year)
+  ['adjustment','socialOpener','socialChallenge','artLevel','circleTime','langDev'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.selectedIndex = 0;
+  });
+  document.getElementById('pronoun').selectedIndex = 0;
+}
+
+// ── Word document generation (docx.js v7) ────────────────────────────────
+async function downloadAll() {
+  if (!studentQueue.length) return;
+
+  const {
+    Document, Packer, Table, TableRow, TableCell,
+    Paragraph, TextRun, BorderStyle, AlignmentType,
+    WidthType, VerticalAlign, ShadingType,
+  } = docx;
+
+  // Standard 1" margins (1440 DXA each). US Letter = 12240 DXA wide.
+  // Content width = 12240 - 1440*2 = 9360 DXA.
+  // columnWidths generates <w:tblGrid> which Google Docs requires for layout.
+  const MARGIN   = 1440;
+  const COL_FULL = 9360;
+  const COL_LEFT = 4118;  // 44% of 9360
+  const COL_RIGHT = 5242; // 56% of 9360
+
+  const NO_BORDER = {
+    top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+
+  const NO_TABLE_BORDER = {
+    top:     { style: BorderStyle.NONE, size: 0 },
+    bottom:  { style: BorderStyle.NONE, size: 0 },
+    left:    { style: BorderStyle.NONE, size: 0 },
+    right:   { style: BorderStyle.NONE, size: 0 },
+    insideH: { style: BorderStyle.NONE, size: 0 },
+    insideV: { style: BorderStyle.NONE, size: 0 },
+  };
+
+  function pillPara(text, spacingAfter) {
+    return new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      spacing: { after: spacingAfter },
+      border: {
+        top:    { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 4 },
+        left:   { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 8 },
+        right:  { style: BorderStyle.SINGLE, size: 6, color: '4a3a8a', space: 8 },
+      },
+      children: [new TextRun({ text, font: 'Calibri', size: 20, color: '333333' })],
+    });
+  }
+
+  function makeSectionTable(title, body, borderColor, bgColor) {
+    const outerBorder = (topSize) => ({
+      top:    { style: BorderStyle.SINGLE, size: topSize, color: borderColor },
+      bottom: { style: BorderStyle.SINGLE, size: 20,      color: borderColor },
+      left:   { style: BorderStyle.SINGLE, size: 20,      color: borderColor },
+      right:  { style: BorderStyle.SINGLE, size: 20,      color: borderColor },
+    });
+
+    return new Table({
+      columnWidths: [COL_FULL],
+      width: { size: COL_FULL, type: WidthType.DXA },
+      borders: NO_TABLE_BORDER,
+      rows: [
+        // Title row
+        new TableRow({
+          children: [new TableCell({
+            width: { size: COL_FULL, type: WidthType.DXA },
+            borders: outerBorder(20),
+            shading: { type: ShadingType.CLEAR, color: 'auto', fill: bgColor },
+            children: [new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 80, after: 80 },
+              children: [new TextRun({
+                text: title,
+                font: 'Century Gothic',
+                bold: true,
+                size: 24,
+                color: '222222',
+                characterSpacing: 25,
+              })],
+            })],
+          })],
+        }),
+        // Body row
+        new TableRow({
+          children: [new TableCell({
+            width: { size: COL_FULL, type: WidthType.DXA },
+            borders: outerBorder(12),
+            children: [new Paragraph({
+              spacing: { before: 140, after: 140 },
+              children: [new TextRun({ text: body, font: 'Calibri', size: 24, color: '222222' })],
+            })],
+          })],
+        }),
+      ],
+    });
+  }
+
+  const allChildren = [];
+
+  studentQueue.forEach((s, i) => {
+    const nameParts  = s.name.split(' ');
+    const firstName  = nameParts[0] || '';
+    const lastName   = nameParts.slice(1).join(' ') || '';
+    const headParts  = s.heading.split(' ');
+    const seasonYear = headParts.slice(-2).join(' ');
+
+    // Page break before every student except the first
+    if (i > 0) {
+      allChildren.push(new Paragraph({
+        pageBreakBefore: true,
+        spacing: { before: 0, after: 0 },
+        children: [new TextRun({ text: '', size: 1 })],
+      }));
+    }
+
+    // Header: 2-column table (name | pills)
+    allChildren.push(new Table({
+      columnWidths: [COL_LEFT, COL_RIGHT], // generates <w:tblGrid> for Google Docs
+      width: { size: COL_FULL, type: WidthType.DXA },
+      borders: NO_TABLE_BORDER,
+      rows: [new TableRow({
+        children: [
+          // Left cell: student name (~44%)
+          new TableCell({
+            width: { size: COL_LEFT, type: WidthType.DXA },
+            verticalAlign: VerticalAlign.TOP,
+            borders: NO_BORDER,
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: [new TextRun({
+                  text: firstName.toUpperCase(),
+                  font: 'Century Gothic', bold: true, size: 52, color: '4a3a8a',
+                })],
+              }),
+              new Paragraph({
+                spacing: { before: 0, after: 140 },
+                children: [new TextRun({
+                  text: lastName.toUpperCase(),
+                  font: 'Century Gothic', bold: true, size: 52, color: '4a3a8a',
+                })],
+              }),
+            ],
+          }),
+          // Right cell: pill labels (~56%)
+          new TableCell({
+            width: { size: COL_RIGHT, type: WidthType.DXA },
+            verticalAlign: VerticalAlign.CENTER,
+            borders: NO_BORDER,
+            children: [
+              pillPara("Miss Vicky's Class", 55),
+              pillPara('Comments', 55),
+              pillPara(seasonYear, 0),
+            ],
+          }),
+        ],
+      })],
+    }));
+
+    // Opening paragraph
+    allChildren.push(new Paragraph({
+      spacing: { before: 180, after: 180 },
+      children: [new TextRun({ text: s.opening, font: 'Calibri', size: 24, color: '222222' })],
+    }));
+
+    // Section boxes
+    const secs = [
+      { title: 'SOCIAL & EMOTIONAL SKILLS', body: s.social, border: '8b2020', bg: 'e8b4b4' },
+      { title: 'FINE & GROSS MOTOR SKILLS',  body: s.motor,  border: 'b8900a', bg: 'f5e89a' },
+      { title: 'LANGUAGE & COMMUNICATION',   body: s.lang,   border: '3d6b2a', bg: 'b8d4a8' },
+      { title: 'GOALS',                      body: s.goals,  border: '1e4d7a', bg: 'a8c4e0' },
+    ];
+    secs.forEach((sec, si) => {
+      allChildren.push(makeSectionTable(sec.title, sec.body, sec.border, sec.bg));
+      if (si < secs.length - 1) {
+        allChildren.push(new Paragraph({ spacing: { before: 0, after: 100 } }));
+      }
+    });
+  });
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: { margin: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN } },
+      },
+      children: allChildren,
+    }],
+  });
+
+  const blob     = await Packer.toBlob(doc);
+  const season   = val('globalSeason') + val('globalYear');
+  const filename = `MissVicky_Comments_${season}.docx`;
+  const url      = URL.createObjectURL(blob);
+  const a        = document.createElement('a');
+  a.href         = url;
+  a.download     = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── On load: restore saved state ──────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  if (studentQueue.length) {
+    renderQueue();
+    const last = studentQueue[studentQueue.length - 1];
+    document.getElementById('successBanner').textContent =
+      `Welcome back! You have ${studentQueue.length} student${studentQueue.length > 1 ? 's' : ''} saved. Keep going or download when ready.`;
+    document.getElementById('successBanner').style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
