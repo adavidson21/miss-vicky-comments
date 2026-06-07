@@ -159,6 +159,111 @@
     }
 
     .download-btn:hover { background: #422d75; }
+
+    /* ── Schedule entries ─────────────────────────────────────────────── */
+    .schedule-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .schedule-entry input[type=time] {
+      width: 130px;
+      flex-shrink: 0;
+      padding: 11px 10px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fafaf8;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .schedule-entry input[type=time]:focus {
+      outline: none;
+      border-color: var(--purple);
+      background: white;
+    }
+
+    .schedule-entry input[type=text] {
+      flex: 1;
+      padding: 11px 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fafaf8;
+      min-width: 0;
+    }
+
+    .schedule-entry input[type=text]:focus {
+      outline: none;
+      border-color: var(--purple);
+      background: white;
+    }
+
+    .remove-entry-btn {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      color: var(--muted);
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .remove-entry-btn:hover { border-color: #c0392b; color: #c0392b; }
+
+    .add-entry-btn {
+      margin-top: 4px;
+      padding: 10px 16px;
+      background: var(--purple-light);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--purple-dark);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .add-entry-btn:hover { background: #ddd4ef; }
+
+    .schedule-col-labels {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 6px;
+      padding-right: 44px; /* offset for the remove button */
+    }
+
+    .schedule-col-labels span {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .schedule-col-labels .col-time    { width: 130px; flex-shrink: 0; }
+    .schedule-col-labels .col-activity { flex: 1; }
+
+    @media (max-width: 480px) {
+      .schedule-entry input[type=time] { width: 110px; }
+      .schedule-col-labels .col-time  { width: 110px; }
+    }
   </style>
 </head>
 <body>
@@ -212,24 +317,16 @@
   <!-- ── Daily Schedule ─────────────────────────────────────────────────── -->
   <div class="card">
     <div class="card-title">Daily Schedule</div>
-    <div class="card-subtitle">Edit as needed — one entry per line.</div>
+    <div class="card-subtitle">Add, remove, or reorder entries. Times use your device's time picker.</div>
 
-    <div class="field">
-      <textarea id="schedule">9:00am - Free play/centers
-9:45am - Circle Time
-10:00am - Snack Time, Diapers/Potty
-10:25am - Outside Time/Gross Motor
-11:05am - Wash Hands, Diapers/Potty
-11:30am - Lunch &amp; Reading
-11:45am - Dismissal for Half Day Kids
-12:00pm - Diapers/Potty
-12:25pm - Nap Time
-2:10pm - Wake Up
-2:15pm - Diapers/Potty
-2:20pm - Snack Time &amp; Reading
-3:00pm - Dismissal</textarea>
-      <span class="hint">Format: "9:00am - Activity"</span>
+    <div class="schedule-col-labels">
+      <span class="col-time">Time</span>
+      <span class="col-activity">Activity</span>
     </div>
+
+    <div id="scheduleEntries"></div>
+
+    <button class="add-entry-btn" onclick="addScheduleEntry()">+ Add Entry</button>
   </div>
 
   <!-- ── Download ───────────────────────────────────────────────────────── -->
@@ -240,13 +337,66 @@
 </div>
 
 <script>
+// ── Schedule entries ──────────────────────────────────────────────────────
+const DEFAULT_SCHEDULE = [
+  { time: '09:00', activity: 'Free play/centers' },
+  { time: '09:45', activity: 'Circle Time' },
+  { time: '10:00', activity: 'Snack Time, Diapers/Potty' },
+  { time: '10:25', activity: 'Outside Time/Gross Motor' },
+  { time: '11:05', activity: 'Wash Hands, Diapers/Potty' },
+  { time: '11:30', activity: 'Lunch & Reading' },
+  { time: '11:45', activity: 'Dismissal for Half Day Kids' },
+  { time: '12:00', activity: 'Diapers/Potty' },
+  { time: '12:25', activity: 'Nap Time' },
+  { time: '14:10', activity: 'Wake Up' },
+  { time: '14:15', activity: 'Diapers/Potty' },
+  { time: '14:20', activity: 'Snack Time & Reading' },
+  { time: '15:00', activity: 'Dismissal' },
+];
+
+function formatTime(t) {
+  // t is "HH:MM" (24h) → "9:00am"
+  if (!t) return '';
+  const [hStr, mStr] = t.split(':');
+  let h = parseInt(hStr, 10);
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return `${h}:${mStr}${ampm}`;
+}
+
+function addScheduleEntry(time, activity) {
+  const container = document.getElementById('scheduleEntries');
+  const row = document.createElement('div');
+  row.className = 'schedule-entry';
+  row.innerHTML = `
+    <input type="time" value="${time || ''}"/>
+    <input type="text" placeholder="Activity description" value="${activity ? activity.replace(/"/g,'&quot;') : ''}"/>
+    <button class="remove-entry-btn" onclick="this.closest('.schedule-entry').remove()" title="Remove">&times;</button>
+  `;
+  container.appendChild(row);
+  if (!time) row.querySelector('input[type=time]').focus();
+}
+
+function getScheduleEntries() {
+  return [...document.querySelectorAll('.schedule-entry')].map(row => ({
+    time:     row.querySelector('input[type=time]').value,
+    activity: row.querySelector('input[type=text]').value.trim(),
+  })).filter(e => e.activity);
+}
+
+// Pre-fill on load
+window.addEventListener('DOMContentLoaded', () => {
+  DEFAULT_SCHEDULE.forEach(e => addScheduleEntry(e.time, e.activity));
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 function v(id) { return document.getElementById(id).value.trim(); }
 
 function buildTeacherNames() {
-  const lead   = v('leadTeacher') || 'Miss Vicky';
+  const lead    = v('leadTeacher') || 'Miss Vicky';
   const asstIds = ['asst1','asst2','asst3','asst4'];
-  const assts  = asstIds.map(id => v(id)).filter(Boolean);
-  const all    = [lead, ...assts];
+  const assts   = asstIds.map(id => v(id)).filter(Boolean);
+  const all     = [lead, ...assts];
   if (all.length === 1) return all[0];
   if (all.length === 2) return all[0] + ' and ' + all[1];
   return all.slice(0, -1).join(', ') + ', and ' + all[all.length - 1];
@@ -263,10 +413,7 @@ async function downloadOpenHouse() {
   const lead       = v('leadTeacher')   || 'Miss Vicky';
   const teachers   = buildTeacherNames();
 
-  const scheduleLines = document.getElementById('schedule').value
-    .split('\n')
-    .map(l => l.trim())
-    .filter(Boolean);
+  const scheduleEntries = getScheduleEntries();
 
   // ── docx helpers ──────────────────────────────────────────────────────
   const MARGIN = 1440; // 1"
@@ -316,16 +463,14 @@ async function downloadOpenHouse() {
     });
   }
 
-  function scheduleRow(line) {
-    const dashIdx = line.indexOf(' - ');
-    const time    = dashIdx > -1 ? line.slice(0, dashIdx).trim() : '';
-    const activity = dashIdx > -1 ? line.slice(dashIdx + 3).trim() : line;
+  function scheduleRow(entry) {
+    const timeLabel = entry.time ? formatTime(entry.time) + '  —  ' : '';
     return new Paragraph({
       spacing: { before: 0, after: 80 },
       indent: { left: 360 },
       children: [
-        new TextRun({ text: time + (time ? '  —  ' : ''), font: 'Calibri', size: 24, bold: true, color: '4a3a8a' }),
-        new TextRun({ text: activity, font: 'Calibri', size: 24, color: '222222' }),
+        new TextRun({ text: timeLabel, font: 'Calibri', size: 24, bold: true, color: '4a3a8a' }),
+        new TextRun({ text: entry.activity, font: 'Calibri', size: 24, color: '222222' }),
       ],
     });
   }
@@ -347,7 +492,7 @@ async function downloadOpenHouse() {
 
     // Schedule
     sectionHeading('Our daily routine in our classroom is the following:'),
-    ...scheduleLines.map(scheduleRow),
+    ...scheduleEntries.map(scheduleRow),
     spacer(),
 
     // Skills intro
