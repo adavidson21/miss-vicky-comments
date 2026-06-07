@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <title>Miss Vicky's Comment Generator</title>
+  <title>Student Comment Generator</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
   <style>
@@ -86,6 +86,7 @@
     .season-bar select { padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a3d9a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
 
     .season-bar input[type=number] { width: 80px; text-align: center; }
+    .season-bar input[type=text]   { width: 180px; }
 
     /* ── Main layout ──────────────────────────────────────────── */
     .main {
@@ -530,10 +531,12 @@
      color:rgba(255,255,255,0.8);font-size:0.85rem;font-weight:700;text-decoration:none;">
     &#8592; Home
   </a>
-  <h1>Miss Vicky's Comment Generator</h1>
+  <h1>Student Comment Generator</h1>
   <p>Fill in the steps for each student, then download one Word document for the whole class.</p>
 </div>
 <div class="season-bar">
+  <label for="globalClass">Class:</label>
+  <input type="text" id="globalClass" placeholder="e.g. Miss Vicky's Class" autocomplete="off"/>
   <label for="globalSeason">Semester:</label>
   <select id="globalSeason">
     <option value="Fall">Fall</option>
@@ -912,6 +915,7 @@ function saveState() {
   localStorage.setItem('mv_queue',  JSON.stringify(studentQueue));
   localStorage.setItem('mv_season', val('globalSeason'));
   localStorage.setItem('mv_year',   val('globalYear'));
+  localStorage.setItem('mv_class',  val('globalClass'));
 }
 
 function loadState() {
@@ -922,10 +926,12 @@ function loadState() {
       if (Array.isArray(parsed)) studentQueue.push(...parsed);
     } catch(e) {}
   }
-  const season = localStorage.getItem('mv_season');
-  const year   = localStorage.getItem('mv_year');
-  if (season) document.getElementById('globalSeason').value = season;
-  if (year)   document.getElementById('globalYear').value   = year;
+  const season    = localStorage.getItem('mv_season');
+  const year      = localStorage.getItem('mv_year');
+  const className = localStorage.getItem('mv_class');
+  if (season)    document.getElementById('globalSeason').value = season;
+  if (year)      document.getElementById('globalYear').value   = year;
+  if (className) document.getElementById('globalClass').value  = className;
 }
 
 function clearSavedList() {
@@ -1052,10 +1058,11 @@ function buildStudent() {
   }
   if (goalsExtra) goals += ` ${goalsExtra}`;
 
+  const className = val('globalClass') || 'Class';
   return {
     name:    `${firstName} ${lastName}`,
     firstName,
-    heading: `Miss Vicky's Class Comments ${season} ${year}`,
+    heading: `${className} Comments ${season} ${year}`,
     opening: opening.trim(),
     social:  social.trim(),
     motor:   motor.trim(),
@@ -1288,7 +1295,7 @@ async function downloadAll() {
             verticalAlign: VerticalAlign.CENTER,
             borders: NO_BORDER,
             children: [
-              pillPara("Miss Vicky's Class", 55),
+              pillPara(val('globalClass') || 'Class', 55),
               pillPara('Comments', 55),
               pillPara(seasonYear, 0),
             ],
@@ -1328,8 +1335,9 @@ async function downloadAll() {
   });
 
   const blob     = await Packer.toBlob(doc);
-  const season   = val('globalSeason') + val('globalYear');
-  const filename = `MissVicky_Comments_${season}.docx`;
+  const className = (val('globalClass') || 'Class').replace(/[^a-zA-Z0-9]/g, '_');
+  const season    = val('globalSeason') + val('globalYear');
+  const filename  = `${className}_Comments_${season}.docx`;
   const url      = URL.createObjectURL(blob);
   const a        = document.createElement('a');
   a.href         = url;

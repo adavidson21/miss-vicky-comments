@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <title>Open House Letter — Miss Vicky</title>
+  <title>Open House Letter</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
   <style>
@@ -566,7 +566,7 @@ async function downloadOpenHouse() {
   // ── Build document children ────────────────────────────────────────────
   const children = [
     // Title — smaller header
-    heading(`Miss Vicky's ${classroom}`, 36, true),
+    heading(`${lead}'s ${classroom}`, 36, true),
     heading('Welcome to our classroom!', 24, true),
 
     // Intro
